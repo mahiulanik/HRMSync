@@ -1,10 +1,10 @@
-# HRMS — Human Resource Management System
+# HRMSync
 
 > A production-oriented HRMS web application for managing employees, attendance, leave, shifts, payroll, payslips, and day-to-day HR operations through role-based administrative and employee portals.
 
 ## Overview
 
-HRMS is a full-stack web application with separate experiences for administrators and employees. The React/Vite frontend communicates with an Express/MongoDB backend through a REST API.
+HRMSync is a full-stack web application with separate experiences for administrators and employees. The React/Vite frontend communicates with an Express/MongoDB backend through a REST API.
 
 Implemented business areas include:
 
