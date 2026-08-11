@@ -66,8 +66,8 @@ export default function Sidebar({ role, isOpen, onToggle }) {
         <div className="p-5 flex items-center gap-3">
           <User size={24} />
           <div>
-            <div className="font-bold text-sm leading-tight">Employee MS</div>
-            <div className="text-xs text-gray-400">Management System</div>
+            <div className="font-bold text-sm leading-tight">HRMSync</div>
+            <div className="text-xs text-gray-400">Employee Management System</div>
           </div>
         </div>
 
