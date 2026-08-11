@@ -1,0 +1,223 @@
+import mongoose from "mongoose";
+import bcrypt from "bcrypt";
+import User from "../models/userModel.js";
+import Employee from "../models/employeeModel.js";
+
+export const createEmployee = async (data) => {
+  const {email, firstName,lastName, password, mobile,position, grossSalary, allowances, deductions, employeeStatus, joiningDate, isDeleted, bio, department, role,} = data;
+
+  // Validation
+  if (!email || !password || !firstName || !position ||  !department || !joiningDate) {
+    throw new Error("Missing required fields");
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedMobile = mobile?.trim() || "";
+
+  // Check duplicate email
+  const existingUser = await User.findOne({email: normalizedEmail,});
+
+  if (existingUser) {
+    throw new Error("User already exists!");
+  }
+
+  // Start Transaction
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create User
+    const user = new User({
+      email: normalizedEmail,
+      password: hashedPassword,
+      role: role || "EMPLOYEE",
+    });
+
+    await user.save({ session });
+
+    // Create Employee
+    const employee = new Employee({
+      userId: user._id,
+      email: normalizedEmail,
+      firstName,
+      lastName,
+      mobile: normalizedMobile,
+      position,
+      grossSalary: Number(grossSalary) || 0,
+      basicSalary: Math.round((Number(grossSalary) || 0) * 0.5),
+      houseRent: Math.round((Number(grossSalary) || 0) * 0.25),
+      medical: Math.round((Number(grossSalary) || 0) * 0.125),
+      conveyance: Math.round((Number(grossSalary) || 0) * 0.125),
+      allowances: Number(allowances) || 0,
+      deductions: Number(deductions) || 0,
+      employeeStatus: employeeStatus || "Active",
+      joiningDate: new Date(joiningDate),
+      isDeleted: isDeleted || false,
+      bio: bio || "",
+      department,
+    });
+
+    await employee.save({ session });
+
+    // Commit Transaction
+    await session.commitTransaction();
+
+    return employee;
+  } catch (error) {
+    // Rollback Transaction
+    await session.abortTransaction();
+
+    throw error;
+  } finally {
+    // Close Session
+    await session.endSession();
+  }
+};
+
+export const getEmployees = async (department, showDeleted, onlyDeleted) => {
+  const where = {};
+
+  if (onlyDeleted) {
+    where.isDeleted = true;
+  } else if (!showDeleted) {
+    where.isDeleted = false;
+  }
+
+  if (department) {
+    where.department = department;
+  }
+
+  const employeeList = await Employee.find(where)
+    .sort({ createdAt: -1 })
+    .populate("userId", "email role")
+    .lean();
+
+  return employeeList.map((emp) => ({
+    ...emp,
+    id: emp._id.toString(),
+    user: emp.userId
+      ? {
+          email: emp.userId.email,
+          role: emp.userId.role,
+        }
+      : null,
+  }));
+};
+
+export const getEmployeeById = async (id) => {
+  const employee = await Employee.findById(id)
+    .populate("userId", "email role")
+    .lean();
+
+  if (!employee) {
+    throw new Error("Employee not found");
+  }
+
+  return {
+    ...employee,
+    id: employee._id.toString(),
+    user: employee.userId
+      ? {
+          email: employee.userId.email,
+          role: employee.userId.role,
+        }
+      : null,
+  };
+};
+
+export const updateEmployee = async (id, data) => {
+  const {email, firstName, lastName, password, mobile,position, grossSalary, allowances, deductions,employeeStatus, joiningDate,isDeleted,bio, department,role,} = data;
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedMobile = mobile?.trim() || "";
+
+  // Start Transaction
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    // Update Employee
+    const updatedEmployee = await Employee.findOneAndUpdate(
+      {
+        _id: id,
+      },
+      {
+        email: normalizedEmail,
+        firstName,
+        lastName,
+        mobile: normalizedMobile,
+        position,
+        grossSalary: Number(grossSalary) || 0,
+        basicSalary: Math.round((Number(grossSalary) || 0) * 0.5),
+        houseRent: Math.round((Number(grossSalary) || 0) * 0.25),
+        medical: Math.round((Number(grossSalary) || 0) * 0.125),
+        conveyance: Math.round((Number(grossSalary) || 0) * 0.125),
+        allowances: Number(allowances) || 0,
+        deductions: Number(deductions) || 0,
+        employeeStatus: employeeStatus || "Active",
+        joiningDate: new Date(joiningDate),
+        isDeleted: isDeleted || false,
+        bio: bio || "",
+        department,
+      },
+      {
+        returnDocument: "after",
+        session,
+      },
+    );
+
+    // Employee not found
+    if (!updatedEmployee) {
+      throw new Error("Employee Not Found");
+    }
+
+    // Prepare User Update Object
+    const userUpdate = {
+      email: normalizedEmail,
+    };
+    if (role) {
+      userUpdate.role = role;
+    }
+    if (password) {
+      userUpdate.password = await bcrypt.hash(password, 10);
+    }
+
+    // Update User
+    await User.findByIdAndUpdate(updatedEmployee.userId, userUpdate, {
+      session,
+    });
+
+    // Commit Transaction
+    await session.commitTransaction();
+    return updatedEmployee;
+  } catch (error) {
+    // Rollback Transaction
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    // Close Session
+    await session.endSession();
+  }
+};
+
+export const deleteEmployee = async (id) => {
+  const employee = await Employee.findById(id);
+
+  if (!employee) {
+    throw new Error("Employee not found");
+  }
+
+  employee.isDeleted = true;
+  employee.employeeStatus = "Inactive";
+
+  await employee.save();
+
+  return {
+    message: "Employee deleted successfully",
+  };
+};

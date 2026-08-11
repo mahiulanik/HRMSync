@@ -1,0 +1,149 @@
+# ------------------------------------------
+# Environment Variables & Secrets
+# ------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ------------------------------------------
+# Dependencies
+# ------------------------------------------
+node_modules/
+**/node_modules/
+
+# ------------------------------------------
+# Logs
+# ------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------------------------
+# Runtime / Temporary Files
+# ------------------------------------------
+*.pid
+*.pid.lock
+*.seed
+*.tmp
+*.temp
+tmp/
+temp/
+
+# ------------------------------------------
+# Backend
+# ------------------------------------------
+backend/uploads/
+backend/public/uploads/
+backend/storage/
+backend/dist/
+backend/build/
+
+# ------------------------------------------
+# Frontend
+# ------------------------------------------
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# ------------------------------------------
+# Coverage / Testing
+# ------------------------------------------
+coverage/
+.nyc_output/
+.vitest/
+playwright-report/
+test-results/
+
+# ------------------------------------------
+# Vite
+# ------------------------------------------
+.vite/
+
+# ------------------------------------------
+# Cache
+# ------------------------------------------
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# ------------------------------------------
+# OS Generated Files
+# ------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+
+# ------------------------------------------
+# Windows
+# ------------------------------------------
+ehthumbs.db
+Icon?
+
+# ------------------------------------------
+# IDE / Editors
+# ------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# ------------------------------------------
+# Sublime / VS Code temporary files
+# ------------------------------------------
+*.sublime-workspace
+*.sublime-project
+
+# ------------------------------------------
+# Backup / Temporary Source Files
+# ------------------------------------------
+*.bak
+*.backup
+*.old
+*.orig
+*~
+
+# ------------------------------------------
+# Database / Local Data
+# ------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+
+# ------------------------------------------
+# Generated Documents
+# ------------------------------------------
+*.pdf
+*.csv
+
+# ------------------------------------------
+# OS / Explorer metadata
+# ------------------------------------------
+$RECYCLE.BIN/
+
+# ------------------------------------------
+# Security / Certificates
+# ------------------------------------------
+*.pem
+*.key
+*.crt
+*.p12
+
+# ------------------------------------------
+# Local deployment files
+# ------------------------------------------
+.vercel/
+.netlify/
