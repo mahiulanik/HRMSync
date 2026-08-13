@@ -280,7 +280,6 @@ export default function LoginPage({ role }) {
                       type="email"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      placeholder="john@example.com"
                       className="w-full pl-10 pr-4 py-3 border border-border rounded-lg focus:outline-none focus:border-primary"
                       required
                     />

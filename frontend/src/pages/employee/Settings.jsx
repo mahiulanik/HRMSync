@@ -63,7 +63,7 @@ export default function EmployeeSettings() {
               <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-page-bg transition-colors">Choose Image</button>
               {selectedFile && <button onClick={handleUpload} disabled={uploading} className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">{uploading ? 'Uploading...' : 'Upload'}</button>}
             </div>
-            <p className="text-xs text-text-secondary mt-2">JPG, PNG, WebP or GIF. Max 100KB.</p>
+            <p className="text-xs text-text-secondary mt-2">JPG, JPEG, PNG, WebP or GIF. Max 300KB.</p>
             {uploadMsg && <p className={`text-xs mt-2 ${uploadMsg.includes('success') ? 'text-green-600' : 'text-red-600'}`}>{uploadMsg}</p>}
           </div>
         </div>
