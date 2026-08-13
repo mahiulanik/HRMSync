@@ -3,15 +3,12 @@ import * as profileService from "../services/profileService.js";
 
 export const getUserProfile = async (req, res) => {
     try {
-        const result = await profileService.getProfile(
-            req.params.userId
-        );
+        const result = await profileService.getProfile(req.session);
 
         return res.status(200).json(result);
 
     } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
+        return res.status(500).json({
             error: error.message || "Failed to fetch profile",
         });
     }
