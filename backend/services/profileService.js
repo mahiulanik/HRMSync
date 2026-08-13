@@ -2,17 +2,17 @@ import Employee from "../models/employeeModel.js";
 import { uploadImage } from "./cloudinaryService.js";
 
 
-export const getProfile = async (session) => {
-  const employee = await Employee.findOne({userId: session.userId,});
+export const getProfile = async (userId) => {
 
-  if (!employee) {
-    return {
-      firstName: "Admin",
-      lastName: "",
-      email: session.email,
-    };
-  }
-  return employee;
+    const employee = await Employee.findOne({
+        userId
+    });
+
+    if (!employee) {
+        throw new Error("Employee profile not found");
+    }
+
+    return employee;
 };
 
 export const updateProfile = async (userId, data) => {
