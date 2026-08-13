@@ -8,7 +8,8 @@ const sendEmail = async (Email, Subject, Message) => {
             from: process.env.EMAIL_FROM,
             to: [Email],
             subject: Subject,
-            text: Message
+            text: Message,
+            html: Message
         });
 
         if (error) {

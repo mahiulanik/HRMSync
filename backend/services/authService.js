@@ -169,7 +169,15 @@ export const sendPasswordResetOTP = async (email) => {
 
     await user.save();
 
-    await sendEmail(user.email, "Your OTP code", `Your OTP code for reset password is ${otp}`);
+await sendEmail(
+    user.email,
+    "Password Reset OTP",
+    `
+        <p>Your password reset OTP for <strong>HRMSync</strong> is:</p>
+        <p><strong style="font-size: 24px;">${otp}</strong></p>
+        <p>This OTP is valid for 5 minutes.</p>
+    `
+);
 
     return {
         success: true,
