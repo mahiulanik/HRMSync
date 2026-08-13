@@ -7,88 +7,89 @@ import { ArrowLeft, Save, Trash2, RotateCcw } from 'lucide-react';
 const DEPARTMENTS = ['Administration','Human Resources','Finance & Accounts','Sales','Marketing','Customer Support','Operations','Supply Chain','Procurement','Information Technology','Software Development','Legal','Internal Audit','Design','Business Intelligence'];
 
 export default function EmployeeProfile() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [form, setForm] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
-  const [showDelete, setShowDelete] = useState(false);
-  const [isDeleted, setIsDeleted] = useState(false);
-  const [pendingReactivate, setPendingReactivate] = useState(false);
 
-  // useEffect(() => {
-  //   api.get(`/employees/${id}`).then(res => {
-  //     const emp = res.data;
-  //     setIsDeleted(emp.isDeleted || false);
-  //     setForm({ firstName: emp.firstName||'', lastName: emp.lastName||'', email: emp.email||'', mobile: emp.mobile||'', position: emp.position||'', department: emp.department||'', joiningDate: emp.joiningDate ? new Date(emp.joiningDate).toISOString().split('T')[0] : '', grossSalary: emp.grossSalary||'', allowances: emp.allowances||'', deductions: emp.deductions||'', bio: emp.bio||'', employeeStatus: emp.employeeStatus||'Active', profilePic: emp.profilePic||null, password: '', role: emp.user?.role||'EMPLOYEE' });
-  //     setLoading(false);
-  //   }).catch(() => setLoading(false));
-  // }, [id]);
+    const { id } = useParams();
+    const navigate = useNavigate();
 
-  // const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+    const [form, setForm] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [msg, setMsg] = useState('');
+    const [showDelete, setShowDelete] = useState(false);
+    const [isDeleted, setIsDeleted] = useState(false);
+    const [pendingReactivate, setPendingReactivate] = useState(false);
 
-  // const gross = Number(form.grossSalary) || 0;
-  // const basicSalary = Math.round(gross * 0.5);
-  // const houseRent = Math.round(gross * 0.25);
-  // const medical = Math.round(gross * 0.125);
-  // const conveyance = Math.round(gross * 0.125);
 
-  // const handleSave = async () => {
-  //   setSaving(true); setMsg('');
-  //   try {
-  //     const body = { ...form, grossSalary: Number(form.grossSalary)||0, allowances: Number(form.allowances)||0, deductions: Number(form.deductions)||0 };
-  //     if (pendingReactivate) { body.isDeleted = false; body.employeeStatus = 'Active'; }
-  //     if (!body.password) delete body.password;
-  //     await api.put(`/employees/${id}`, body);
-  //     if (pendingReactivate) { setIsDeleted(false); setPendingReactivate(false); setForm({ ...form, employeeStatus: 'Active' }); setMsg('Employee reactivated successfully'); }
-  //     else setMsg('Profile updated successfully');
-  //   } catch (err) { setMsg(err.response?.data?.error || 'Failed to update profile'); }
-  //   finally { setSaving(false); }
-  // };
+    useEffect(() => {
 
-  useEffect(() => {
-    api.get(`/employees/${id}`)
-        .then(res => {
-            console.log("EMPLOYEE PROFILE RESPONSE:", res.data);
+        api.get(`/employees/${id}`)
+            .then(res => {
 
-            const emp = res.data;
+                console.log(
+                    "EMPLOYEE PROFILE RESPONSE:",
+                    res.data
+                );
 
-            setIsDeleted(emp.isDeleted || false);
+                const emp = res.data;
 
-            setForm({
-                firstName: emp.firstName || '',
-                lastName: emp.lastName || '',
-                email: emp.email || '',
-                mobile: emp.mobile || '',
-                position: emp.position || '',
-                department: emp.department || '',
-                joiningDate: emp.joiningDate
-                    ? new Date(emp.joiningDate)
-                        .toISOString()
-                        .split('T')[0]
-                    : '',
-                grossSalary: emp.grossSalary || '',
-                allowances: emp.allowances || '',
-                deductions: emp.deductions || '',
-                bio: emp.bio || '',
-                employeeStatus: emp.employeeStatus || 'Active',
-                profilePic: emp.profilePic || null,
-                password: '',
-                role: emp.user?.role || 'EMPLOYEE'
+                setIsDeleted(emp.isDeleted || false);
+
+                setForm({
+                    firstName: emp.firstName || '',
+                    lastName: emp.lastName || '',
+                    email: emp.email || '',
+                    mobile: emp.mobile || '',
+                    position: emp.position || '',
+                    department: emp.department || '',
+
+                    joiningDate: emp.joiningDate
+                        ? new Date(emp.joiningDate)
+                            .toISOString()
+                            .split('T')[0]
+                        : '',
+
+                    grossSalary: emp.grossSalary || '',
+                    allowances: emp.allowances || '',
+                    deductions: emp.deductions || '',
+                    bio: emp.bio || '',
+
+                    employeeStatus:
+                        emp.employeeStatus || 'Active',
+
+                    profilePic: emp.profilePic || null,
+
+                    password: '',
+
+                    role: emp.user?.role || 'EMPLOYEE'
+                });
+
+                setLoading(false);
+
+            })
+            .catch(error => {
+
+                console.error(
+                    "EMPLOYEE PROFILE ERROR:",
+                    error.response?.data || error
+                );
+
+                setLoading(false);
             });
 
-            setLoading(false);
-        })
-        .catch(error => {
-            console.error(
-                "EMPLOYEE PROFILE ERROR:",
-                error.response?.data || error
-            );
+    }, [id]);
 
-            setLoading(false);
-        });
-}, [id]);
+
+    // IMPORTANT
+    const handleChange = (e) => {
+
+        const { name, value } = e.target;
+
+        setForm((prev) => ({
+            ...prev,
+            [name]: value
+        }));
+
+    };
 
   const handleDelete = async () => { try { await api.delete(`/employees/${id}`); navigate('/admin/employees'); } catch (err) { setMsg(err.response?.data?.error || 'Failed to delete employee'); } };
   const handleReactivate = () => { setPendingReactivate(true); setForm({ ...form, employeeStatus: 'Active' }); };
