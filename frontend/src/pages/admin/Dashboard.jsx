@@ -12,11 +12,17 @@ export default function AdminDashboard() {
     api.get('/dashboard').then(res => setStats(res.data)).catch(() => {});
   }, []);
 
+  const name = stats?.employee ? `${stats.employee.firstName} ${stats.employee.lastName}`.trim() : (user?.name || 'Employee');
+  const position = stats?.employee?.position || '';
+  const department = stats?.employee?.department || '';
+
   const employees = stats?.recentEmployees || [];
 
   return (
     <div>
       <h1 className="text-2xl font-bold">Dashboard</h1>
+      <h1 className="text-2xl font-bold">Welcome, {name}!</h1>
+      <p className="text-text-secondary text-sm mb-6">{position}{department ? ` - ${department}` : ''}</p>
       <p className="text-text-secondary text-sm mb-6">Welcome back, Admin — here's your overview</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
