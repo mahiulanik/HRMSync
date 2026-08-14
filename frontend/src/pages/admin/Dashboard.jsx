@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import StatCard from '../../components/StatCard';
@@ -7,28 +6,18 @@ import { Users, Building2, CalendarCheck, FileText } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     api.get('/dashboard').then(res => setStats(res.data)).catch(() => {});
   }, []);
 
-  const name = stats?.employee ? `${stats.employee.firstName} ${stats.employee.lastName}`.trim() : (user?.name || 'Employee');
-  const position = stats?.employee?.position || '';
-  const department = stats?.employee?.department || '';
-
   const employees = stats?.recentEmployees || [];
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Welcome, {name}!</h1>
-      <p className="text-text-secondary text-sm">
-      {position}{department ? ` - ${department}` : ''}
-      </p>
-      <p className="text-text-secondary text-sm mb-6">
-      Here's your overview
-      </p>
+      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <p className="text-text-secondary text-sm mb-6">Welcome back, Admin — here's your overview</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
         <StatCard title="Total Employees" value={stats?.totalEmployees ?? 0} icon={Users} className="border-l-4 border-l-primary" />
