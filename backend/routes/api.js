@@ -43,7 +43,7 @@ router.post("/reset-password", authController.resetEmployeePassword)
 
 
 // Profile Routes
-router.get("/profile/:employeeId", authMiddleware, profileController.getUserProfile)
+router.get("/profile", authMiddleware, profileController.getUserProfile)
 router.post("/profile", authMiddleware, profileController.updateUserProfile)
 router.post("/profile/pic", authMiddleware, upload.single("profilePic"), profileController.uploadProfilePic)
 

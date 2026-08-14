@@ -20,21 +20,26 @@ export default function EmployeeProfile() {
     const [pendingReactivate, setPendingReactivate] = useState(false);
 
 
+    // ==========================
+    // GET EMPLOYEE
+    // ==========================
+
     useEffect(() => {
 
         api.get(`/employees/${id}`)
             .then(res => {
 
+                const emp = res.data;
+
                 console.log(
                     "EMPLOYEE PROFILE RESPONSE:",
-                    res.data
+                    emp
                 );
-
-                const emp = res.data;
 
                 setIsDeleted(emp.isDeleted || false);
 
                 setForm({
+
                     firstName: emp.firstName || '',
                     lastName: emp.lastName || '',
                     email: emp.email || '',
@@ -48,19 +53,29 @@ export default function EmployeeProfile() {
                             .split('T')[0]
                         : '',
 
-                    grossSalary: emp.grossSalary || '',
-                    allowances: emp.allowances || '',
-                    deductions: emp.deductions || '',
+                    grossSalary: emp.grossSalary || 0,
+
+                    // Backend calculated values
+                    basicSalary: emp.basicSalary || 0,
+                    houseRent: emp.houseRent || 0,
+                    medical: emp.medical || 0,
+                    conveyance: emp.conveyance || 0,
+
+                    allowances: emp.allowances || 0,
+                    deductions: emp.deductions || 0,
+
                     bio: emp.bio || '',
 
                     employeeStatus:
                         emp.employeeStatus || 'Active',
 
-                    profilePic: emp.profilePic || null,
+                    profilePic:
+                        emp.profilePic || null,
 
                     password: '',
 
-                    role: emp.user?.role || 'EMPLOYEE'
+                    role:
+                        emp.user?.role || 'EMPLOYEE'
                 });
 
                 setLoading(false);
@@ -79,23 +94,176 @@ export default function EmployeeProfile() {
     }, [id]);
 
 
-    // IMPORTANT
+    // ==========================
+    // HANDLE CHANGE
+    // ==========================
+
     const handleChange = (e) => {
 
         const { name, value } = e.target;
 
-        setForm((prev) => ({
+        setForm(prev => ({
             ...prev,
             [name]: value
         }));
-
     };
 
-  const handleDelete = async () => { try { await api.delete(`/employees/${id}`); navigate('/admin/employees'); } catch (err) { setMsg(err.response?.data?.error || 'Failed to delete employee'); } };
-  const handleReactivate = () => { setPendingReactivate(true); setForm({ ...form, employeeStatus: 'Active' }); };
 
-  if (loading) return <div className="flex items-center justify-center min-h-[50vh]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
-  if (!form) return <div className="text-center py-12 text-text-secondary">Employee not found</div>;
+    // ==========================
+    // SAVE
+    // ==========================
+
+    const handleSave = async () => {
+
+        setSaving(true);
+        setMsg('');
+
+        try {
+
+            const body = {
+
+                ...form,
+
+                grossSalary:
+                    Number(form.grossSalary) || 0,
+
+                basicSalary:
+                    Number(form.basicSalary) || 0,
+
+                houseRent:
+                    Number(form.houseRent) || 0,
+
+                medical:
+                    Number(form.medical) || 0,
+
+                conveyance:
+                    Number(form.conveyance) || 0,
+
+                allowances:
+                    Number(form.allowances) || 0,
+
+                deductions:
+                    Number(form.deductions) || 0
+            };
+
+
+            if (pendingReactivate) {
+
+                body.isDeleted = false;
+                body.employeeStatus = 'Active';
+            }
+
+
+            if (!body.password) {
+                delete body.password;
+            }
+
+
+            await api.put(
+                `/employees/${id}`,
+                body
+            );
+
+
+            if (pendingReactivate) {
+
+                setIsDeleted(false);
+                setPendingReactivate(false);
+
+                setForm(prev => ({
+                    ...prev,
+                    employeeStatus: 'Active'
+                }));
+
+                setMsg(
+                    'Employee reactivated successfully'
+                );
+
+            } else {
+
+                setMsg(
+                    'Profile updated successfully'
+                );
+            }
+
+
+        } catch (err) {
+
+            setMsg(
+                err.response?.data?.error ||
+                'Failed to update profile'
+            );
+
+        } finally {
+
+            setSaving(false);
+        }
+    };
+
+
+    // ==========================
+    // DELETE
+    // ==========================
+
+    const handleDelete = async () => {
+
+        try {
+
+            await api.delete(
+                `/employees/${id}`
+            );
+
+            navigate('/admin/employees');
+
+        } catch (err) {
+
+            setMsg(
+                err.response?.data?.error ||
+                'Failed to delete employee'
+            );
+        }
+    };
+
+
+    // ==========================
+    // REACTIVATE
+    // ==========================
+
+    const handleReactivate = () => {
+
+        setPendingReactivate(true);
+
+        setForm(prev => ({
+            ...prev,
+            employeeStatus: 'Active'
+        }));
+    };
+
+
+    // ==========================
+    // LOADING
+    // ==========================
+
+    if (loading) {
+
+        return (
+            <div className="flex items-center justify-center min-h-[50vh]">
+
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+
+            </div>
+        );
+    }
+
+
+    if (!form) {
+
+        return (
+            <div className="text-center py-12 text-text-secondary">
+                Employee not found
+            </div>
+        );
+    }
 
   return (
     <div>
@@ -148,21 +316,124 @@ export default function EmployeeProfile() {
             </div>
           </div>
           <div className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Salary</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-              <div><label className="block text-sm font-medium mb-1">Gross Salary</label><input name="grossSalary" type="number" value={form.grossSalary} onChange={handleChange} className="w-full px-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary" /></div>
-              <div><label className="block text-sm font-medium mb-1">Allowances</label><input name="allowances" type="number" value={form.allowances} onChange={handleChange} className="w-full px-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary" /></div>
-              <div><label className="block text-sm font-medium mb-1">Deductions</label><input name="deductions" type="number" value={form.deductions} onChange={handleChange} className="w-full px-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary" /></div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-              <div><label className="block text-sm font-medium mb-1">Basic Salary (50%)</label><input type="number" value={basicSalary} readOnly className="w-full px-3 py-2.5 border border-border rounded-lg bg-gray-50 text-gray-500" /></div>
-              <div><label className="block text-sm font-medium mb-1">House Rent (25%)</label><input type="number" value={houseRent} readOnly className="w-full px-3 py-2.5 border border-border rounded-lg bg-gray-50 text-gray-500" /></div>
-              <div><label className="block text-sm font-medium mb-1">Medical (12.5%)</label><input type="number" value={medical} readOnly className="w-full px-3 py-2.5 border border-border rounded-lg bg-gray-50 text-gray-500" /></div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div><label className="block text-sm font-medium mb-1">Conveyance (12.5%)</label><input type="number" value={conveyance} readOnly className="w-full px-3 py-2.5 border border-border rounded-lg bg-gray-50 text-gray-500" /></div>
-            </div>
-          </div>
+  <h2 className="text-lg font-semibold mb-4">Salary</h2>
+
+  {/* Gross Salary / Allowances / Deductions */}
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+
+    <div>
+      <label className="block text-sm font-medium mb-1">
+        Gross Salary
+      </label>
+
+      <input
+        name="grossSalary"
+        type="number"
+        value={form.grossSalary}
+        onChange={handleChange}
+        className="w-full px-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary"
+      />
+    </div>
+
+
+    <div>
+      <label className="block text-sm font-medium mb-1">
+        Allowances
+      </label>
+
+      <input
+        name="allowances"
+        type="number"
+        value={form.allowances}
+        onChange={handleChange}
+        className="w-full px-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary"
+      />
+    </div>
+
+
+    <div>
+      <label className="block text-sm font-medium mb-1">
+        Deductions
+      </label>
+
+      <input
+        name="deductions"
+        type="number"
+        value={form.deductions}
+        onChange={handleChange}
+        className="w-full px-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary"
+      />
+    </div>
+
+  </div>
+
+
+  {/* Salary Breakdown */}
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+
+    <div>
+      <label className="block text-sm font-medium mb-1">
+        Basic Salary (50%)
+      </label>
+
+      <input
+        type="number"
+        value={form.basicSalary}
+        readOnly
+        className="w-full px-3 py-2.5 border border-border rounded-lg bg-gray-50 text-gray-500"
+      />
+    </div>
+
+
+    <div>
+      <label className="block text-sm font-medium mb-1">
+        House Rent (25%)
+      </label>
+
+      <input
+        type="number"
+        value={form.houseRent}
+        readOnly
+        className="w-full px-3 py-2.5 border border-border rounded-lg bg-gray-50 text-gray-500"
+      />
+    </div>
+
+
+    <div>
+      <label className="block text-sm font-medium mb-1">
+        Medical (12.5%)
+      </label>
+
+      <input
+        type="number"
+        value={form.medical}
+        readOnly
+        className="w-full px-3 py-2.5 border border-border rounded-lg bg-gray-50 text-gray-500"
+      />
+    </div>
+
+  </div>
+
+
+  {/* Conveyance */}
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+    <div>
+      <label className="block text-sm font-medium mb-1">
+        Conveyance (12.5%)
+      </label>
+
+      <input
+        type="number"
+        value={form.conveyance}
+        readOnly
+        className="w-full px-3 py-2.5 border border-border rounded-lg bg-gray-50 text-gray-500"
+      />
+    </div>
+
+  </div>
+
+</div>
           <div className="bg-card border border-border rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Reset Password</h2>
             <div><label className="block text-sm font-medium mb-1">New Password (leave blank to keep current)</label><input name="password" type="password" value={form.password} onChange={handleChange} className="w-full px-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary" minLength={8} /></div>

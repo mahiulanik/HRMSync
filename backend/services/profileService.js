@@ -10,6 +10,7 @@ export const getProfile = async (session) => {
       firstName: "Admin",
       lastName: "",
       email: session.email,
+      role: session.role
     };
   }
   return employee;

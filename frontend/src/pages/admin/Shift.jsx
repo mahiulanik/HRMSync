@@ -13,6 +13,8 @@ export default function AdminShift() {
   const [editingShift, setEditingShift] = useState(null);
   const [shiftForm, setShiftForm] = useState({ name: '', startTime: '', endTime: '', graceMinutes: 15, weekends: [] });
   const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
   const [selectedShift, setSelectedShift] = useState('');
   const [assignDate, setAssignDate] = useState('');
   const [assignMonth, setAssignMonth] = useState(new Date().getMonth() + 1);
@@ -68,6 +70,14 @@ export default function AdminShift() {
   viewAssignments.forEach(s => { const d = new Date(s.date); shiftMap[d.getDate()] = s; });
   const filteredShifts = shifts.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
   const activeShifts = shifts.filter(s => s.isActive);
+
+  const filteredEmployees = employees
+  .filter(emp => !emp.isDeleted)
+  .filter(emp =>
+    `${emp.firstName} ${emp.lastName}`
+      .toLowerCase()
+      .includes(employeeSearch.toLowerCase())
+  );
 
   return (
     <div>
