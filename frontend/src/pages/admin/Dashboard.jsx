@@ -6,13 +6,14 @@ import { Users, Building2, CalendarCheck, FileText } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     api.get('/dashboard').then(res => setStats(res.data)).catch(() => {});
   }, []);
 
-  const name = stats?.employee ? `${stats.employee.firstName} ${stats.employee.lastName}`.trim() : 'Admin';
+  const name = stats?.employee ? `${stats.employee.firstName} ${stats.employee.lastName}`.trim() : (user?.name || 'Employee');
   const position = stats?.employee?.position || '';
   const department = stats?.employee?.department || '';
 
@@ -21,16 +22,18 @@ export default function AdminDashboard() {
   return (
     <div>
       <h1 className="text-2xl font-bold">Welcome, {name}!</h1>
-      <p className="text-text-secondary text-sm mb-6">{position}{department ? ` - ${department}` : ''}</p>
+      <p className="text-text-secondary text-sm">
+      {position}{department ? ` - ${department}` : ''}
+      </p>
       <p className="text-text-secondary text-sm mb-6">
-        Here's your overview
+      Here's your overview
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-        <StatCard title="Total Employees"  icon={Users} className="border-l-4 border-l-primary" />
-        <StatCard title="Departments"  icon={Building2} className="border-l-4 border-l-primary" />
-        <StatCard title="Today's Attendance"  icon={CalendarCheck} className="border-l-4 border-l-primary" />
-        <StatCard title="Pending Leaves"  icon={FileText} className="border-l-4 border-l-primary" />
+        <StatCard title="Total Employees" value={stats?.totalEmployees ?? 0} icon={Users} className="border-l-4 border-l-primary" />
+        <StatCard title="Departments" value={stats?.totalDepartments ?? 0} icon={Building2} className="border-l-4 border-l-primary" />
+        <StatCard title="Today's Attendance" value={stats?.todayAttendance ?? 0} icon={CalendarCheck} className="border-l-4 border-l-primary" />
+        <StatCard title="Pending Leaves" value={stats?.pendingLeaves ?? 0} icon={FileText} className="border-l-4 border-l-primary" />
       </div>
 
       {employees.length > 0 && (
