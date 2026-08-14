@@ -8,7 +8,7 @@ export default function Landing() {
     <div className="flex flex-col lg:flex-row min-h-screen">
       <div className="w-full lg:w-1/2 bg-sidebar flex flex-col justify-center px-8 sm:px-16 py-12 lg:py-0">
         <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-6">
-          Employee<br />Management System
+          HRMSync
         </h1>
         <p className="text-gray-400 text-base leading-relaxed max-w-md">
           Streamline your workforce operations, track attendance, manage payroll, and empower your team securely.
