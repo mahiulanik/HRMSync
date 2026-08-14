@@ -9,34 +9,63 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
+
     if (token) {
       api.get('/session')
-        .then(res => setUser(res.data.user))
-        .catch(() => { localStorage.removeItem('accessToken'); localStorage.removeItem('refreshToken'); })
-        .finally(() => setLoading(false));
+        .then(res => {
+          setUser(res.data.user);
+        })
+        .catch(() => {
+          localStorage.removeItem('accessToken');
+          setUser(null);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } else {
       setLoading(false);
     }
   }, []);
 
   const login = async (email, password, role_type) => {
-    const { data } = await api.post('/login', { email, password, role_type });
+    const { data } = await api.post('/login', {
+      email,
+      password,
+      role_type
+    });
+
+    // Only access token is stored in localStorage
+    // Refresh token is stored by backend as HttpOnly cookie
     localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
+
     const session = await api.get('/session');
+
     setUser(session.data.user);
+
     return session.data.user;
   };
 
   const logout = async () => {
-    try { await api.post('/logout'); } catch {}
+    try {
+      await api.post('/logout');
+    } catch {}
+
+    // Only remove access token
+    // Refresh token is cleared by backend /logout
     localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        loading
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

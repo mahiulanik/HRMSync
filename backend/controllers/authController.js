@@ -5,10 +5,20 @@ export const login = async (req, res) => {
     try {
         const result = await authService.loginUser(req.body);
 
-        return res.status(200).json(result);
+        res.cookie("refreshToken", result.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            path: "/api",
+        });
+
+        return res.status(200).json({
+            accessToken: result.accessToken,
+        });
 
     } catch (error) {
-        return res.status(500).json({
+        return res.status(401).json({
             error: error.message || "Login failed",
         });
     }
@@ -41,32 +51,41 @@ export const changePass = async (req, res) => {
 
 export const refreshToken = async (req, res) => {
     try {
-        const result = await authService.refreshToken(req.body);
+        const result = await authService.refreshToken(
+            req.cookies.refreshToken
+        );
 
-        return res.status(200).json(result);
+        res.cookie("refreshToken", result.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            path: "/api",
+        });
+
+        return res.status(200).json({
+            accessToken: result.accessToken,
+        });
 
     } catch (error) {
         return res.status(401).json({
-            error: error.message
+            error: error.message || "Invalid refresh token",
         });
     }
 };
 
 
-export const logout = async (req, res) => {
+export const logout = (req, res) => {
+    res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/api",
+    });
 
-    try {
-        const result = await authService.logoutUser(
-            req.session.userId
-        );
-
-        return res.status(200).json(result);
-
-    } catch (error) {
-        return res.status(500).json({
-            error: error.message
-        });
-    }
+    return res.status(200).json({
+        message: "Logged out successfully",
+    });
 };
 
 

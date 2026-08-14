@@ -13,47 +13,72 @@ import validator from "validator"
 
 
 export const loginUser = async (data) => {
-  const { email, password, role_type } = data;
+    const { email, password, role_type } = data;
 
-  if (!email || !password) {
-    throw new Error("Invalid email or password");
-  }
-
-  const user = await User.findOne({ email });
-  if (!user) {
-    throw new Error("Invalid email or password");
-  }
-
-  if (role_type === "admin" && user.role !== "ADMIN") {
-    throw new Error("Not authorized as admin");
-  }
-  if (role_type === "employee" && user.role !== "EMPLOYEE") {
-    throw new Error("Not authorized as employee");
-  }
-
-  if (user.role === "EMPLOYEE") {
-    const employee = await Employee.findOne({ userId: user._id });
-    if (employee && (employee.isDeleted || employee.employeeStatus === "Inactive")) {
-      throw new Error("Your account has been deactivated. Please contact administrator.");
+    if (!email || !password) {
+        throw new Error("Invalid email or password");
     }
-  }
 
-  const isValid = await bcrypt.compare(password, user.password);
-  if (!isValid) {
-    throw new Error("Invalid email or password");
-  }
+    const user = await User.findOne({ email });
 
-  const accessToken = generateAccessToken(user.email, user._id, user.role);
+    if (!user) {
+        throw new Error("Invalid email or password");
+    }
 
-  const refreshToken = generateRefreshToken(user.email, user._id, user.role);
+    if (role_type === "admin" && user.role !== "ADMIN") {
+        throw new Error("Not authorized as admin");
+    }
 
-  user.refreshToken = refreshToken;
-  await user.save();
+    if (role_type === "employee" && user.role !== "EMPLOYEE") {
+        throw new Error("Not authorized as employee");
+    }
 
-  return {
-    accessToken,
-    refreshToken,
-  };
+    if (user.role === "EMPLOYEE") {
+        const employee = await Employee.findOne({
+            userId: user._id
+        });
+
+        if (
+            employee &&
+            (
+                employee.isDeleted ||
+                employee.employeeStatus === "Inactive"
+            )
+        ) {
+            throw new Error(
+                "Your account has been deactivated. Please contact administrator."
+            );
+        }
+    }
+
+    const isValid = await bcrypt.compare(
+        password,
+        user.password
+    );
+
+    if (!isValid) {
+        throw new Error("Invalid email or password");
+    }
+
+    const accessToken = generateAccessToken(
+        user.email,
+        user._id,
+        user.role
+    );
+
+    const refreshToken = generateRefreshToken(
+        user.email,
+        user._id,
+        user.role
+    );
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    return {
+        accessToken,
+        refreshToken
+    };
 };
 
 
@@ -87,41 +112,48 @@ export const changePassword = async (userId, data) => {
 };
 
 
-export const refreshToken = async (data) => {
-  const { refreshToken } = data;
+export const refreshToken = async (refreshToken) => {
 
-  if (!refreshToken) {
-    throw new Error("Refresh token is required");
-  }
+    if (!refreshToken) {
+        throw new Error("Refresh token is required");
+    }
 
-  const decoded = verifyRefreshToken(refreshToken);
+    const decoded = verifyRefreshToken(refreshToken);
 
-  if (!decoded) {
-    throw new Error("Invalid refresh token");
-  }
+    if (!decoded) {
+        throw new Error("Invalid refresh token");
+    }
 
-  const user = await User.findById(decoded.userId);
+    const user = await User.findById(decoded.userId);
 
-  if (!user) {
-    throw new Error("User not found");
-  }
+    if (!user) {
+        throw new Error("User not found");
+    }
 
-  if (user.refreshToken !== refreshToken) {
-    throw new Error("Refresh token is invalid");
-  }
+    if (user.refreshToken !== refreshToken) {
+        throw new Error("Refresh token is invalid");
+    }
 
-  const accessToken = generateAccessToken(user.email, user._id, user.role);
+    const accessToken = generateAccessToken(
+        user.email,
+        user._id,
+        user.role
+    );
 
-  const newRefreshToken = generateRefreshToken(user.email, user._id, user.role);
+    const newRefreshToken = generateRefreshToken(
+        user.email,
+        user._id,
+        user.role
+    );
 
-  user.refreshToken = newRefreshToken;
+    user.refreshToken = newRefreshToken;
 
-  await user.save();
+    await user.save();
 
-  return {
-    accessToken,
-    refreshToken: newRefreshToken,
-  };
+    return {
+        accessToken,
+        refreshToken: newRefreshToken,
+    };
 };
 
 

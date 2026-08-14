@@ -3,6 +3,7 @@ import helmet from "helmet";
 import hpp from "hpp";
 import cors from "cors"
 import mongoose from "mongoose";
+import cookieParser from "cookie-parser";
 import "dotenv/config";
 import router from "./routes/api.js"
 import connectDB from "./config/db.js";
@@ -19,6 +20,7 @@ app.use(cors({
 }));
 app.use(express.json({limit: "10mb"}))
 app.use(express.urlencoded({extended: true, limit: "10mb"}))
+app.use(cookieParser());
 app.use(globalLimiter);
 
 // WEB CACHE
