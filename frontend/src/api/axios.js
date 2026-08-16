@@ -41,21 +41,18 @@ api.interceptors.response.use(
     (response) => response,
 
     async (error) => {
-
         const originalRequest = error.config;
 
-        // Only try refresh for 401 responses
-        // and only once for the same request
         if (
             error.response?.status === 401 &&
             originalRequest &&
-            !originalRequest._retry
+            !originalRequest._retry &&
+            !originalRequest.url?.includes("/login") &&
+            !originalRequest.url?.includes("/refresh-token")
         ) {
-
             originalRequest._retry = true;
 
             try {
-
                 // Refresh token is automatically
                 // sent through HttpOnly cookie
                 const { data } = await refreshClient.post(
@@ -75,8 +72,6 @@ api.interceptors.response.use(
                 return api(originalRequest);
 
             } catch (refreshError) {
-
-                // Refresh token expired/invalid
                 localStorage.removeItem("accessToken");
 
                 window.location.href = "/";
