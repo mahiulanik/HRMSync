@@ -172,7 +172,7 @@ export const logoutUser = async (userId) => {
 export const sendPasswordResetOTP = async (email) => {
 
     if (!email) {
-        throw new Error("Invalid email or password");
+        throw new Error("Invalid email");
     }
 
     if (!validator.isEmail(email)) {
