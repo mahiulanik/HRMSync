@@ -176,13 +176,13 @@ export const sendPasswordResetOTP = async (email) => {
     }
 
     if (!validator.isEmail(email)) {
-        throw new Error("Invalid email or password");
+        throw new Error("Invalid email");
     }
 
     const user = await User.findOne({ email });
 
     if (!user) {
-        throw new Error("Invalid email or password");
+        throw new Error("Invalid email");
     }
 
     // Generate 6 digit OTP
