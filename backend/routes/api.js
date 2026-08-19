@@ -4,6 +4,7 @@ const router = express.Router()
 
 
 
+
 // Controllers
 import * as employeeController from "../controllers/employeeController.js"
 import * as authController from "../controllers/authController.js"
@@ -16,31 +17,33 @@ import * as shiftController from "../controllers/shiftController.js";
 import * as shiftAssignmentController from "../controllers/shiftAssignmentController.js";
 import * as payrollController from "../controllers/payrollController.js";
 import * as publicHolidayController from "../controllers/publicHolidayController.js";
+import { createEmployeeValidation, updateEmployeeValidation, employeeIdValidation } from "../validators/employeeValidator.js";
+import { loginValidation, changePasswordValidation, forgotPasswordValidation, verifyResetOTPValidation, resetPasswordValidation } from "../validators/authValidator.js";
 
 
 // Middleware
 import { authMiddleware, requiredAdmin } from "../middlewares/authMiddleware.js"
 import { authLimiter } from "../middlewares/rateLimiter.js";
 import asyncHandler from "../middlewares/asyncHandler.js";
-
+import validate from "../middlewares/validate.js";
 
 // Employee Routes
-router.post("/register", authMiddleware, requiredAdmin, employeeController.createEmp)
+router.post("/register", authMiddleware, requiredAdmin, createEmployeeValidation, validate, employeeController.createEmp)
 router.get("/employees", authMiddleware, requiredAdmin, employeeController.getEmps)
-router.get("/employees/:id", authMiddleware, requiredAdmin, employeeController.getEmpById)
-router.put("/employees/:id", authMiddleware, requiredAdmin, employeeController.updateEmp)
-router.delete("/employees/:id", authMiddleware, requiredAdmin, employeeController.deleteEmp)
+router.get("/employees/:id", authMiddleware, requiredAdmin, employeeIdValidation, validate, employeeController.getEmpById)
+router.put("/employees/:id", authMiddleware, requiredAdmin, updateEmployeeValidation, validate, employeeController.updateEmp)
+router.delete("/employees/:id", authMiddleware, requiredAdmin, employeeIdValidation, validate, employeeController.deleteEmp)
 
 
 // Authentication Routes
-router.post("/login", authController.login)
+router.post("/login", loginValidation, validate, authController.login)
 router.get("/session", authMiddleware, authController.session)
-router.post("/change-password", authMiddleware, authController.changePass)
+router.post("/change-password", authMiddleware, changePasswordValidation, validate, asyncHandler(authController.changePass))
 router.post("/logout", authMiddleware, authController.logout);
 router.post("/refresh-token", authController.refreshToken);
-router.post("/forgot-password", authController.sendPasswordResetOTP)
-router.post("/verify-reset-otp", authController.verifyPasswordResetOTP)
-router.post("/reset-password", authController.resetEmployeePassword)
+router.post("/forgot-password", forgotPasswordValidation, validate, asyncHandler(authController.sendPasswordResetOTP))
+router.post("/verify-reset-otp", verifyResetOTPValidation, validate, asyncHandler(authController.verifyPasswordResetOTP))
+router.post("/reset-password", resetPasswordValidation, validate, asyncHandler(authController.resetEmployeePassword))
 
 
 // Profile Routes

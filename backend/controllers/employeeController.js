@@ -59,7 +59,7 @@ export const updateEmp = async (req, res) => {
 
     return res.status(200).json(result);
   } catch (error) {
-    if (error.message === "Employee not found") {
+    if (error.message === "Employee Not found") {
       return res.status(404).json({
         error: error.message,
       });

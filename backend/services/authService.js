@@ -9,6 +9,7 @@ import bcrypt from "bcrypt";
 import sendEmail from "../config/sendEmail.js"
 import crypto from "crypto"
 import validator from "validator"
+import AppError from "../utils/AppError.js";
 
 
 
@@ -86,17 +87,17 @@ export const changePassword = async (userId, data) => {
   const { currentPassword, newPassword } = data;
 
   if (!currentPassword || !newPassword) {
-    throw new Error("Both passwords are required");
+    throw new AppError("Both passwords are required", 400);
   }
 
   const user = await User.findById(userId);
   if (!user) {
-    throw new Error("User not found");
+    throw new AppError("User not found", 404);
   }
 
   const isValid = await bcrypt.compare(currentPassword, user.password);
   if (!isValid) {
-    throw new Error("Password incorrect");
+    throw new AppError("Password incorrect", 401);
   }
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
