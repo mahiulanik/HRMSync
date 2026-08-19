@@ -16,11 +16,13 @@ import * as shiftController from "../controllers/shiftController.js";
 import * as shiftAssignmentController from "../controllers/shiftAssignmentController.js";
 import * as payrollController from "../controllers/payrollController.js";
 import * as publicHolidayController from "../controllers/publicHolidayController.js";
+import * as testController from "../controllers/testController.js";
 
 
 // Middleware
 import { authMiddleware, requiredAdmin } from "../middlewares/authMiddleware.js"
 import { authLimiter } from "../middlewares/rateLimiter.js";
+import asyncHandler from "../middlewares/asyncHandler.js";
 
 
 // Employee Routes
@@ -103,6 +105,21 @@ router.get("/public-holidays/:id", authMiddleware, publicHolidayController.getPu
 router.patch("/public-holidays/:id", authMiddleware, requiredAdmin, publicHolidayController.updatePublicHoliday);
 router.delete("/public-holidays/:id", authMiddleware, requiredAdmin, publicHolidayController.deletePublicHoliday);
 
+
+router.get(
+    "/success",
+    asyncHandler(testSuccess)
+);
+
+router.get(
+    "/error",
+    asyncHandler(testError)
+);
+
+router.get(
+    "/server-error",
+    asyncHandler(testServerError)
+);
 
 
 export default router
