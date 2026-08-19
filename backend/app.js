@@ -8,6 +8,7 @@ import "dotenv/config";
 import router from "./routes/api.js"
 import connectDB from "./config/db.js";
 import { globalLimiter } from "./middlewares/rateLimiter.js";
+import { errorMiddleware } from "./middlewares/errorMiddleware.js";
 
 const app = express()
 
@@ -28,6 +29,8 @@ app.set("etag", false)
 
 // API Routes
 app.use("/api", router)
+
+app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 3000
 await connectDB()
