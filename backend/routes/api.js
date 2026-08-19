@@ -16,7 +16,6 @@ import * as shiftController from "../controllers/shiftController.js";
 import * as shiftAssignmentController from "../controllers/shiftAssignmentController.js";
 import * as payrollController from "../controllers/payrollController.js";
 import * as publicHolidayController from "../controllers/publicHolidayController.js";
-import * as testController from "../controllers/testController.js";
 
 
 // Middleware
@@ -105,6 +104,12 @@ router.get("/public-holidays/:id", authMiddleware, publicHolidayController.getPu
 router.patch("/public-holidays/:id", authMiddleware, requiredAdmin, publicHolidayController.updatePublicHoliday);
 router.delete("/public-holidays/:id", authMiddleware, requiredAdmin, publicHolidayController.deletePublicHoliday);
 
+
+import {
+    testSuccess,
+    testError,
+    testServerError
+} from "../controllers/testController.js";
 
 router.get(
     "/success",
