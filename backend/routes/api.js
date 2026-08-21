@@ -19,6 +19,7 @@ import * as payrollController from "../controllers/payrollController.js";
 import * as publicHolidayController from "../controllers/publicHolidayController.js";
 import { createEmployeeValidation, updateEmployeeValidation, employeeIdValidation } from "../validators/employeeValidator.js";
 import { loginValidation, changePasswordValidation, forgotPasswordValidation, verifyResetOTPValidation, resetPasswordValidation } from "../validators/authValidator.js";
+import { createLeaveValidation, getLeavesValidation, updateLeaveValidation } from "../validators/leaveValidator.js";
 
 
 // Middleware
@@ -59,9 +60,9 @@ router.get("/admin/attendance", authMiddleware, requiredAdmin, attendanceControl
 
 
 // Leave Routes
-router.post("/create-leave", authMiddleware, leaveController.createUserLeave)
-router.get("/get-leaves", authMiddleware, leaveController.getUserLeaves)
-router.patch("/update-leave/:id", authMiddleware, requiredAdmin, leaveController.updateUserLeave)
+router.post("/create-leave", authMiddleware, createLeaveValidation, validate, leaveController.createUserLeave)
+router.get("/get-leaves", authMiddleware, getLeavesValidation, validate, leaveController.getUserLeaves)
+router.patch("/update-leave/:id", authMiddleware, requiredAdmin, updateLeaveValidation, validate, leaveController.updateUserLeave)
 
 
 // Payslip Routes
