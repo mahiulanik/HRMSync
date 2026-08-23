@@ -20,6 +20,7 @@ import * as publicHolidayController from "../controllers/publicHolidayController
 import { createEmployeeValidation, updateEmployeeValidation, employeeIdValidation } from "../validators/employeeValidator.js";
 import { loginValidation, changePasswordValidation, forgotPasswordValidation, verifyResetOTPValidation, resetPasswordValidation } from "../validators/authValidator.js";
 import { createLeaveValidation, getLeavesValidation, updateLeaveValidation } from "../validators/leaveValidator.js";
+import { generatePayrollValidation, companyPayrollValidation, departmentPayrollValidation, employeePayrollValidation } from "../validators/payrollValidator.js";
 
 
 // Middleware
@@ -95,10 +96,10 @@ router.delete("/delete-shift-assignment/:id", authMiddleware, requiredAdmin, shi
 
 
 // Payroll Routes(Admin Only)
-router.post("/generate-payroll", authMiddleware, requiredAdmin, payrollController.generatePayroll);
-router.get("/company-payroll", authMiddleware, requiredAdmin, payrollController.getCompanyPayroll);
-router.get("/department-payroll/:department", authMiddleware, requiredAdmin, payrollController.getDepartmentPayroll);
-router.get("/employee-payroll/:employeeId", authMiddleware, requiredAdmin, payrollController.getEmployeePayroll);
+router.post("/generate-payroll", authMiddleware, requiredAdmin, generatePayrollValidation, validate, payrollController.generatePayroll);
+router.get("/company-payroll", authMiddleware, requiredAdmin, companyPayrollValidation, validate, payrollController.getCompanyPayroll);
+router.get("/department-payroll/:department", authMiddleware, requiredAdmin, departmentPayrollValidation, validate, payrollController.getDepartmentPayroll);
+router.get("/employee-payroll/:employeeId", authMiddleware, requiredAdmin, employeePayrollValidation, validate, payrollController.getEmployeePayroll);
 
 
 // Public Holiday Routes
@@ -108,27 +109,6 @@ router.get("/public-holidays/:id", authMiddleware, publicHolidayController.getPu
 router.patch("/public-holidays/:id", authMiddleware, requiredAdmin, publicHolidayController.updatePublicHoliday);
 router.delete("/public-holidays/:id", authMiddleware, requiredAdmin, publicHolidayController.deletePublicHoliday);
 
-
-import {
-    testSuccess,
-    testError,
-    testServerError
-} from "../controllers/testController.js";
-
-router.get(
-    "/success",
-    asyncHandler(testSuccess)
-);
-
-router.get(
-    "/error",
-    asyncHandler(testError)
-);
-
-router.get(
-    "/server-error",
-    asyncHandler(testServerError)
-);
 
 
 export default router
