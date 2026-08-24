@@ -197,12 +197,12 @@ export const generatePayroll = async (month, year) => {
 
             // Salary Calculation
 
-            const payslipGross = roundMoney(grossSalary + overtimeAmount);
+            const payslipGross = roundMoney(earnedBasicSalary + earnedHouseRent + earnedMedical + earnedConveyance + earnedAllowances + overtimeAmount);
 
-            const employeeTotalDeductions = roundMoney(unpaidLeaveDeduction + otherDeductions);
+            const employeeTotalDeductions = roundMoney(otherDeductions);
 
-            const netSalary =roundMoney(payslipGross + allowances - employeeTotalDeductions);
-
+            const netSalary = roundMoney(payslipGross - employeeTotalDeductions);
+            
             // CREATE PAYSLIP INSIDE TRANSACTION
 
             await Payslip.create([
