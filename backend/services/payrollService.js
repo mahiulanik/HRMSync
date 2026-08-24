@@ -197,7 +197,7 @@ export const generatePayroll = async (month, year) => {
 
             // Salary Calculation
 
-            const payslipGross = roundMoney(earnedBasicSalary + earnedHouseRent + earnedMedical + earnedConveyance + earnedAllowances + overtimeAmount);
+            const payslipGross = roundMoney(basicSalary + houseRent + medical + conveyance + allowances + overtimeAmount);
 
             const employeeTotalDeductions = roundMoney(otherDeductions);
 
