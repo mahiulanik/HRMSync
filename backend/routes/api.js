@@ -21,6 +21,10 @@ import { createEmployeeValidation, updateEmployeeValidation, employeeIdValidatio
 import { loginValidation, changePasswordValidation, forgotPasswordValidation, verifyResetOTPValidation, resetPasswordValidation } from "../validators/authValidator.js";
 import { createLeaveValidation, getLeavesValidation, updateLeaveValidation } from "../validators/leaveValidator.js";
 import { generatePayrollValidation, companyPayrollValidation, departmentPayrollValidation, employeePayrollValidation } from "../validators/payrollValidator.js";
+import { updateProfileValidation } from "../validators/profileValidator.js";
+import {attendanceQueryValidation, adminAttendanceQueryValidation} from "../validators/attendanceValidator.js";
+import {createPayslipValidation, payslipIdValidation} from "../validators/payslipValidator.js";
+
 
 
 // Middleware
@@ -50,14 +54,14 @@ router.post("/reset-password", resetPasswordValidation, validate, asyncHandler(a
 
 // Profile Routes
 router.get("/profile", authMiddleware, profileController.getUserProfile)
-router.post("/profile", authMiddleware, profileController.updateUserProfile)
+router.post("/profile", authMiddleware, updateProfileValidation, validate, profileController.updateUserProfile)
 router.post("/profile/pic", authMiddleware, upload.single("profilePic"), profileController.uploadProfilePic)
 
 
 // Attendance Routes
 router.post("/attendance", authMiddleware, attendanceController.userClockInOut)
-router.get("/attendance", authMiddleware, attendanceController.getUserAttendance)
-router.get("/admin/attendance", authMiddleware, requiredAdmin, attendanceController.getAdminAttendance)
+router.get("/attendance", authMiddleware, attendanceQueryValidation, validate, attendanceController.getUserAttendance)
+router.get("/admin/attendance", authMiddleware, requiredAdmin, adminAttendanceQueryValidation, validate, attendanceController.getAdminAttendance)
 
 
 // Leave Routes
@@ -67,9 +71,9 @@ router.patch("/update-leave/:id", authMiddleware, requiredAdmin, updateLeaveVali
 
 
 // Payslip Routes
-router.post("/create-payslip", authMiddleware, requiredAdmin, payslipController.createUserPayslip)
+router.post("/create-payslip", authMiddleware, requiredAdmin, createPayslipValidation, validate, payslipController.createUserPayslip)
 router.get("/get-payslips", authMiddleware, payslipController.getUsersPayslips)
-router.get("/get-payslip-by-id/:id", authMiddleware, payslipController.getUserPayslipById)
+router.get("/get-payslip-by-id/:id", authMiddleware, payslipIdValidation, validate, payslipController.getUserPayslipById)
 
 
 // Dashboard Route
