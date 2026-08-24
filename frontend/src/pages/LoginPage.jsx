@@ -107,7 +107,7 @@ export default function LoginPage({ role }) {
       const user = await login(email, password, role);
       navigate(user.role === 'ADMIN' ? '/admin/dashboard' : '/employee/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError(err.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -123,7 +123,7 @@ export default function LoginPage({ role }) {
       setForgotMsg('OTP sent to your email');
       setForgotStep(2);
     } catch (err) {
-      setForgotError(err.response?.data?.error || 'Failed to send OTP');
+      setForgotError(err.response?.data?.message || 'Failed to send OTP');
     } finally {
       setForgotLoading(false);
     }
@@ -144,7 +144,7 @@ export default function LoginPage({ role }) {
       setForgotMsg('OTP verified successfully');
       setForgotStep(3);
     } catch (err) {
-      setForgotError(err.response?.data?.error || 'Invalid OTP');
+      setForgotError(err.response?.data?.message || 'Invalid OTP');
     } finally {
       setForgotLoading(false);
     }
@@ -168,7 +168,7 @@ export default function LoginPage({ role }) {
         setPassword('');
       }, 2000);
     } catch (err) {
-      setForgotError(err.response?.data?.error || 'Failed to reset password');
+      setForgotError(err.response?.data?.message || 'Failed to reset password');
     } finally {
       setForgotLoading(false);
     }

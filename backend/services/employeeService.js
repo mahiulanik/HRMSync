@@ -2,14 +2,11 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import User from "../models/userModel.js";
 import Employee from "../models/employeeModel.js";
+import AppError from "../utils/AppError.js";
+
 
 export const createEmployee = async (data) => {
   const {email, firstName,lastName, password, mobile,position, grossSalary, allowances, deductions, employeeStatus, joiningDate, isDeleted, bio, department, role,} = data;
-
-  // Validation
-  if (!email || !password || !firstName || !position ||  !department || !joiningDate) {
-    throw new Error("Missing required fields");
-  }
 
   const normalizedEmail = email.trim().toLowerCase();
   const normalizedMobile = mobile?.trim() || "";
@@ -18,7 +15,7 @@ export const createEmployee = async (data) => {
   const existingUser = await User.findOne({email: normalizedEmail,});
 
   if (existingUser) {
-    throw new Error("User already exists!");
+    throw new AppError("User already exists", 409);
   }
 
   // Start Transaction
@@ -78,6 +75,7 @@ export const createEmployee = async (data) => {
   }
 };
 
+
 export const getEmployees = async (department, showDeleted, onlyDeleted) => {
   const where = {};
 
@@ -108,13 +106,19 @@ export const getEmployees = async (department, showDeleted, onlyDeleted) => {
   }));
 };
 
+
 export const getEmployeeById = async (id) => {
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new AppError("Invalid employee ID", 400);
+    }
+
   const employee = await Employee.findById(id)
     .populate("userId", "email role")
     .lean();
 
   if (!employee) {
-    throw new Error("Employee not found");
+    throw new AppError("Employee not found", 404);
   }
 
   return {
@@ -129,7 +133,13 @@ export const getEmployeeById = async (id) => {
   };
 };
 
+
 export const updateEmployee = async (id, data) => {
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new AppError("Invalid employee ID", 400);
+    }
+
   const {email, firstName, lastName, password, mobile,position, grossSalary, allowances, deductions,employeeStatus, joiningDate,isDeleted,bio, department,role,} = data;
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -173,7 +183,7 @@ export const updateEmployee = async (id, data) => {
 
     // Employee not found
     if (!updatedEmployee) {
-      throw new Error("Employee Not Found");
+      throw new AppError("Employee Not Found", 404);
     }
 
     // Prepare User Update Object
@@ -188,13 +198,15 @@ export const updateEmployee = async (id, data) => {
     }
 
     // Update User
-    await User.findByIdAndUpdate(updatedEmployee.userId, userUpdate, {
-      session,
-    });
+    await User.findByIdAndUpdate(
+      updatedEmployee.userId, 
+      userUpdate,
+      {session});
 
     // Commit Transaction
     await session.commitTransaction();
     return updatedEmployee;
+
   } catch (error) {
     // Rollback Transaction
     await session.abortTransaction();
@@ -206,18 +218,24 @@ export const updateEmployee = async (id, data) => {
 };
 
 export const deleteEmployee = async (id) => {
-  const employee = await Employee.findById(id);
 
-  if (!employee) {
-    throw new Error("Employee not found");
-  }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new AppError("Invalid employee ID", 400);
+    }
 
-  employee.isDeleted = true;
-  employee.employeeStatus = "Inactive";
+    const employee = await Employee.findById(id);
 
-  await employee.save();
+    if (!employee) {
+        throw new AppError("Employee not found", 404);
+    }
 
-  return {
-    message: "Employee deleted successfully",
-  };
+    employee.isDeleted = true;
+    employee.employeeStatus = "Inactive";
+
+    await employee.save();
+
+    return {
+        success: true,
+        message: "Employee deleted successfully",
+    };
 };

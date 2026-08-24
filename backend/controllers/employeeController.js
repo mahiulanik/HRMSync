@@ -1,93 +1,50 @@
-import Employee from "../models/employeeModel.js";
 import * as employeeService from "../services/employeeService.js";
+import asyncHandler from "../middlewares/asyncHandler.js";
 
 
-export const createEmp = async (req, res) => {
-  try {
+export const createEmp = asyncHandler(async (req, res) => {
     const result = await employeeService.createEmployee(req.body);
 
     return res.status(201).json(result);
-  } catch (error) {
-    return res.status(500).json({
-      error: error.message || "Failed to create employee",
-    });
-  }
-};
+});
 
 
-export const getEmps = async (req, res) => {
-  try {
+export const getEmps = asyncHandler(async (req, res) => {
     const { department, showDeleted, onlyDeleted } = req.query;
 
-    const result = await employeeService.getEmployees(department, showDeleted === "true", onlyDeleted === "true");
+    const result = await employeeService.getEmployees(
+        department,
+        showDeleted === "true",
+        onlyDeleted === "true"
+    );
 
     return res.status(200).json(result);
-  } catch (error) {
-    return res.status(500).json({
-      error: error.message || "Failed to fetch employees",
-    });
-  }
-};
+});
 
 
-export const getEmpById = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await employeeService.getEmployeeById(id);
+export const getEmpById = asyncHandler(async (req, res) => {
+    const result = await employeeService.getEmployeeById(
+        req.params.id
+    );
 
     return res.status(200).json(result);
-  } catch (error) {
-    if (error.message === "Employee not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-
-    return res.status(500).json({
-      error: error.message || "Failed to fetch employee",
-    });
-  }
-};
+});
 
 
-export const updateEmp = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await employeeService.updateEmployee(id, req.body);
+export const updateEmp = asyncHandler(async (req, res) => {
+    const result = await employeeService.updateEmployee(
+        req.params.id,
+        req.body
+    );
 
     return res.status(200).json(result);
-  } catch (error) {
-    if (error.message === "Employee Not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-
-    return res.status(500).json({
-      error: error.message || "Failed to update employee",
-    });
-  }
-};
+});
 
 
-export const deleteEmp = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await employeeService.deleteEmployee(id);
+export const deleteEmp = asyncHandler(async (req, res) => {
+    const result = await employeeService.deleteEmployee(
+        req.params.id
+    );
 
     return res.status(200).json(result);
-  } catch (error) {
-    if (error.message === "Employee not found") {
-      return res.status(404).json({
-        error: error.message,
-      });
-    }
-
-    return res.status(500).json({
-      error: error.message || "Failed to delete employee",
-    });
-  }
-};
+});

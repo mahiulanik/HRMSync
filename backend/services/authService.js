@@ -16,22 +16,20 @@ import AppError from "../utils/AppError.js";
 export const loginUser = async (data) => {
     const { email, password, role_type } = data;
 
-    if (!email || !password) {
-        throw new Error("Invalid email or password");
-    }
-
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+        email: email.toLowerCase()
+    });
 
     if (!user) {
-        throw new Error("Invalid email or password");
+        throw new AppError("Invalid email or password", 401);
     }
 
     if (role_type === "admin" && user.role !== "ADMIN") {
-        throw new Error("Not authorized as admin");
+        throw new AppError("Not authorized as admin", 403);
     }
 
     if (role_type === "employee" && user.role !== "EMPLOYEE") {
-        throw new Error("Not authorized as employee");
+        throw new AppError("Not authorized as employee", 403);
     }
 
     if (user.role === "EMPLOYEE") {
@@ -46,8 +44,9 @@ export const loginUser = async (data) => {
                 employee.employeeStatus === "Inactive"
             )
         ) {
-            throw new Error(
-                "Your account has been deactivated. Please contact administrator."
+            throw new AppError(
+                "Your account has been deactivated. Please contact administrator.",
+                403
             );
         }
     }
@@ -58,7 +57,7 @@ export const loginUser = async (data) => {
     );
 
     if (!isValid) {
-        throw new Error("Invalid email or password");
+        throw new AppError("Invalid email or password", 401);
     }
 
     const accessToken = generateAccessToken(
@@ -74,6 +73,7 @@ export const loginUser = async (data) => {
     );
 
     user.refreshToken = refreshToken;
+
     await user.save();
 
     return {
@@ -84,55 +84,66 @@ export const loginUser = async (data) => {
 
 
 export const changePassword = async (userId, data) => {
-  const { currentPassword, newPassword } = data;
+    const { currentPassword, newPassword } = data;
 
-  if (!currentPassword || !newPassword) {
-    throw new AppError("Both passwords are required", 400);
-  }
+    const user = await User.findById(userId);
 
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new AppError("User not found", 404);
-  }
+    if (!user) {
+        throw new AppError("User not found", 404);
+    }
 
-  const isValid = await bcrypt.compare(currentPassword, user.password);
-  if (!isValid) {
-    throw new AppError("Password incorrect", 401);
-  }
+    const isValid = await bcrypt.compare(
+        currentPassword,
+        user.password
+    );
 
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-  await User.findByIdAndUpdate(userId, {
-    password: hashedPassword,
-    refreshToken: null,
-  });
+    if (!isValid) {
+        throw new AppError("Password incorrect", 401);
+    }
 
-  return {
-    success: true,
-    message: "Password changed successfully",
-  };
+    const hashedPassword = await bcrypt.hash(
+        newPassword,
+        10
+    );
+
+    await User.findByIdAndUpdate(userId, {
+        password: hashedPassword,
+        refreshToken: null,
+    });
+
+    return {
+        success: true,
+        message: "Password changed successfully",
+    };
 };
 
 
 export const refreshToken = async (refreshToken) => {
 
     if (!refreshToken) {
-        throw new Error("Refresh token is required");
+        throw new AppError("Refresh token is required", 401);
     }
 
-    const decoded = verifyRefreshToken(refreshToken);
+    let decoded;
+
+    try {
+        decoded = verifyRefreshToken(refreshToken);
+    } catch (error) {
+        throw new AppError("Invalid refresh token", 401);
+    }
 
     if (!decoded) {
-        throw new Error("Invalid refresh token");
+        throw new AppError("Invalid refresh token", 401);
     }
 
     const user = await User.findById(decoded.userId);
 
     if (!user) {
-        throw new Error("User not found");
+        throw new AppError("User not found", 404);
     }
 
     if (user.refreshToken !== refreshToken) {
-        throw new Error("Refresh token is invalid");
+        throw new AppError("Refresh token is invalid", 401);
     }
 
     const accessToken = generateAccessToken(
@@ -159,31 +170,35 @@ export const refreshToken = async (refreshToken) => {
 
 
 export const logoutUser = async (userId) => {
-  await User.findByIdAndUpdate(userId, {
-    refreshToken: null,
-  });
 
-  return {
-    success: true,
-    message: "Logout successful",
-  };
+    const user = await User.findByIdAndUpdate(
+        userId,
+        {
+            refreshToken: null,
+        },
+        {
+            returnDocument: "after",
+        }
+    );
+
+    if (!user) {
+        throw new AppError("User not found", 404);
+    }
+    return {
+        success: true,
+        message: "Logout successful",
+    };
 };
 
 
 export const sendPasswordResetOTP = async (email) => {
 
-    if (!email) {
-        throw new Error("Invalid email");
-    }
-
-    if (!validator.isEmail(email)) {
-        throw new Error("Invalid email");
-    }
-
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+        email: email.toLowerCase()
+    });
 
     if (!user) {
-        throw new Error("Invalid email");
+        throw new AppError("Invalid email", 404);
     }
 
     // Generate 6 digit OTP
@@ -191,26 +206,27 @@ export const sendPasswordResetOTP = async (email) => {
         .randomInt(100000, 1000000)
         .toString();
 
-    // OTP valid for 10 minutes
+    // OTP valid for 5 minutes
     const otpExpires = new Date(
         Date.now() + 5 * 60 * 1000
     );
 
     const hashedOTP = await bcrypt.hash(otp, 10);
+
     user.passwordResetOTP = hashedOTP;
     user.passwordResetOTPExpires = otpExpires;
 
     await user.save();
 
-await sendEmail(
-    user.email,
-    "Password Reset OTP",
-    `
-        <p>Your password reset OTP for <strong>HRMSync</strong> is:</p>
-        <p><strong style="font-size: 24px;">${otp}</strong></p>
-        <p>This OTP is valid for 5 minutes.</p>
-    `
-);
+    await sendEmail(
+        user.email,
+        "Password Reset OTP",
+        `
+            <p>Your password reset OTP for <strong>HRMSync</strong> is:</p>
+            <p><strong style="font-size: 24px;">${otp}</strong></p>
+            <p>This OTP is valid for 5 minutes.</p>
+        `
+    );
 
     return {
         success: true,
@@ -221,37 +237,49 @@ await sendEmail(
 
 export const verifyPasswordResetOTP = async (email, otp) => {
 
-    if (!email || !otp) {
-        throw new Error("Email and OTP are required");
-    }
-
-    if (!validator.isEmail(email)) {
-        throw new Error("Invalid email address");
-    }
-
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+        email: email.toLowerCase()
+    });
 
     if (!user) {
-        throw new Error("No account found with this email");
+        throw new AppError(
+            "No account found with this email",
+            404
+        );
     }
 
     if (!user.passwordResetOTP) {
-        throw new Error("OTP not found or expired");
+        throw new AppError(
+            "OTP not found or expired",
+            400
+        );
     }
 
-    if (!user.passwordResetOTPExpires || user.passwordResetOTPExpires < new Date()) {
-
+    if (
+        !user.passwordResetOTPExpires ||
+        user.passwordResetOTPExpires < new Date()
+    ) {
         user.passwordResetOTP = null;
         user.passwordResetOTPExpires = null;
 
         await user.save();
 
-        throw new Error("OTP has expired");
+        throw new AppError(
+            "OTP has expired",
+            400
+        );
     }
 
-    const isOTPValid = await bcrypt.compare(otp, user.passwordResetOTP);
+    const isOTPValid = await bcrypt.compare(
+        otp,
+        user.passwordResetOTP
+    );
+
     if (!isOTPValid) {
-        throw new Error("Invalid OTP");
+        throw new AppError(
+            "Invalid OTP",
+            400
+        );
     }
 
     return {
@@ -263,45 +291,55 @@ export const verifyPasswordResetOTP = async (email, otp) => {
 
 export const resetEmployeePassword = async (email, otp, newPassword) => {
 
-    if (!email || !otp || !newPassword) {
-        throw new Error("Email, OTP and new password are required");
-    }
-
-    if (!validator.isEmail(email)) {
-        throw new Error("Invalid email address");
-    }
-
-    if (newPassword.length < 8) {
-        throw new Error("Password must be at least 8 characters long");
-    }
-
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+        email: email.toLowerCase()
+    });
 
     if (!user) {
-        throw new Error("No account found with this email");
+        throw new AppError(
+            "No account found with this email",
+            404
+        );
     }
 
     if (!user.passwordResetOTP) {
-        throw new Error("OTP not found or expired");
+        throw new AppError(
+            "OTP not found or expired",
+            400
+        );
     }
 
-    if (!user.passwordResetOTPExpires || user.passwordResetOTPExpires < new Date()) {
-
+    if (
+        !user.passwordResetOTPExpires ||
+        user.passwordResetOTPExpires < new Date()
+    ) {
         user.passwordResetOTP = null;
         user.passwordResetOTPExpires = null;
 
         await user.save();
 
-        throw new Error("OTP has expired");
+        throw new AppError(
+            "OTP has expired",
+            400
+        );
     }
 
-    const isOTPValid = await bcrypt.compare(otp, user.passwordResetOTP);
+    const isOTPValid = await bcrypt.compare(
+        otp,
+        user.passwordResetOTP
+    );
+
     if (!isOTPValid) {
-        throw new Error("Invalid OTP");
+        throw new AppError(
+            "Invalid OTP",
+            400
+        );
     }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(
+        newPassword,
+        10
+    );
 
     user.password = hashedPassword;
 

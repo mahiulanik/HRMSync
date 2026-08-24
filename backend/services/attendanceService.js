@@ -2,6 +2,7 @@ import Attendance from "../models/attendanceModel.js"
 import Employee from "../models/employeeModel.js"
 import ShiftAssignment from "../models/shiftAssignmentModel.js"
 import PublicHoliday from "../models/publicHolidayModel.js"
+import AppError from "../utils/AppError.js";
 
 
 
@@ -12,50 +13,72 @@ export const clockInOut = async (session) => {
     });
 
     if (!employee) {
-        const error = new Error("Employee not found");
-        error.statusCode = 404;
-        throw error;
+        throw new AppError("Employee not found", 404);
     }
 
     if (employee.isDeleted) {
-        const error = new Error(
-            "Your account is deactivated, you cannot clock in/out"
+        throw new AppError(
+            "Your account is deactivated, you cannot clock in/out",
+            403
         );
-        error.statusCode = 403;
-        throw error;
     }
 
     const now = new Date();
+
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
+
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
     let shift = null;
+
     try {
-        const assignment = await (await import("../models/shiftAssignmentModel.js")).default.findOne({
-            employeeId: employee._id,
-            date: { $gte: todayStart, $lte: todayEnd },
-        }).populate("shiftId");
-        if (assignment && assignment.shiftId) {
+        const assignment =
+            await ShiftAssignment.findOne({
+                employeeId: employee._id,
+                date: {
+                    $gte: todayStart,
+                    $lte: todayEnd,
+                },
+            }).populate("shiftId");
+
+        if (assignment?.shiftId) {
             shift = assignment.shiftId;
         }
-    } catch {}
+    } catch {
+        // Shift assignment failure should not stop clock in/out
+    }
 
     let existing = await Attendance.findOne({
         employeeId: employee._id,
-        date: { $gte: todayStart, $lte: todayEnd },
+        date: {
+            $gte: todayStart,
+            $lte: todayEnd,
+        },
     });
 
+    // CHECK OUT
     if (existing) {
+
         if (!existing.checkOut) {
+
             existing.checkOut = now;
-            const checkInTime = new Date(existing.checkIn).getTime();
-            const diffMs = now.getTime() - checkInTime;
-            const diffHours = diffMs / (1000 * 60 * 60);
-            const workingHours = parseFloat(diffHours.toFixed(2));
+
+            const checkInTime =
+                new Date(existing.checkIn).getTime();
+
+            const diffMs =
+                now.getTime() - checkInTime;
+
+            const diffHours =
+                diffMs / (1000 * 60 * 60);
+
+            const workingHours =
+                parseFloat(diffHours.toFixed(2));
 
             let dayType = "Half Day";
+
             if (workingHours >= 8) {
                 dayType = "Full Day";
             }
@@ -63,11 +86,23 @@ export const clockInOut = async (session) => {
             let overtimeMinutes = 0;
 
             if (shift) {
-                const [endHour, endMinute] = shift.endTime.split(":").map(Number);
+                const [endHour, endMinute] =
+                    shift.endTime.split(":").map(Number);
+
                 const shiftEnd = new Date(now);
-                shiftEnd.setHours(endHour, endMinute, 0, 0);
+
+                shiftEnd.setHours(
+                    endHour,
+                    endMinute,
+                    0,
+                    0
+                );
+
                 if (now > shiftEnd) {
-                    overtimeMinutes = Math.floor((now.getTime() - shiftEnd.getTime()) / (1000 * 60));
+                    overtimeMinutes = Math.floor(
+                        (now.getTime() - shiftEnd.getTime()) /
+                        (1000 * 60)
+                    );
                 }
             }
 
@@ -91,22 +126,41 @@ export const clockInOut = async (session) => {
         };
     }
 
+    // CHECK IN
     let status = "PRESENT";
     let lateMinutes = 0;
 
     if (shift) {
-        const [startHour, startMinute] = shift.startTime.split(":").map(Number);
+
+        const [startHour, startMinute] =
+            shift.startTime.split(":").map(Number);
+
         const shiftStart = new Date(now);
-        shiftStart.setHours(startHour, startMinute, 0, 0);
-        const graceEnd = new Date(shiftStart.getTime() + shift.graceMinutes * 60 * 1000);
+
+        shiftStart.setHours(
+            startHour,
+            startMinute,
+            0,
+            0
+        );
+
+        const graceEnd = new Date(
+            shiftStart.getTime() +
+            shift.graceMinutes * 60 * 1000
+        );
 
         if (now > graceEnd) {
             status = "LATE";
-            lateMinutes = Math.floor((now.getTime() - graceEnd.getTime()) / (1000 * 60));
+
+            lateMinutes = Math.floor(
+                (now.getTime() - graceEnd.getTime()) /
+                (1000 * 60)
+            );
         }
     }
 
     try {
+
         existing = await Attendance.create({
             employeeId: employee._id,
             shiftId: shift?._id || null,
@@ -114,42 +168,95 @@ export const clockInOut = async (session) => {
             checkIn: now,
             status,
             lateMinutes,
-            overtimeMinutes: 0
+            overtimeMinutes: 0,
         });
+
     } catch (err) {
+
+        // Concurrent clock-in
         if (err.code === 11000) {
+
             existing = await Attendance.findOne({
                 employeeId: employee._id,
-                date: { $gte: todayStart, $lte: todayEnd },
+                date: {
+                    $gte: todayStart,
+                    $lte: todayEnd,
+                },
             });
+
             if (existing && !existing.checkOut) {
+
                 existing.checkOut = now;
-                const checkInTime = new Date(existing.checkIn).getTime();
-                const diffMs = now.getTime() - checkInTime;
-                const diffHours = diffMs / (1000 * 60 * 60);
-                const workingHours = parseFloat(diffHours.toFixed(2));
+
+                const checkInTime =
+                    new Date(existing.checkIn).getTime();
+
+                const diffMs =
+                    now.getTime() - checkInTime;
+
+                const diffHours =
+                    diffMs / (1000 * 60 * 60);
+
+                const workingHours =
+                    parseFloat(diffHours.toFixed(2));
+
                 let dayType = "Half Day";
-                if (workingHours >= 8) dayType = "Full Day";
-                let overtimeMinutes = 0;
-                if (shift) {
-                    const [endHour, endMinute] = shift.endTime.split(":").map(Number);
-                    const shiftEnd = new Date(now);
-                    shiftEnd.setHours(endHour, endMinute, 0, 0);
-                    if (now > shiftEnd) overtimeMinutes = Math.floor((now.getTime() - shiftEnd.getTime()) / (1000 * 60));
+
+                if (workingHours >= 8) {
+                    dayType = "Full Day";
                 }
+
+                let overtimeMinutes = 0;
+
+                if (shift) {
+
+                    const [endHour, endMinute] =
+                        shift.endTime.split(":").map(Number);
+
+                    const shiftEnd = new Date(now);
+
+                    shiftEnd.setHours(
+                        endHour,
+                        endMinute,
+                        0,
+                        0
+                    );
+
+                    if (now > shiftEnd) {
+                        overtimeMinutes = Math.floor(
+                            (now.getTime() - shiftEnd.getTime()) /
+                            (1000 * 60)
+                        );
+                    }
+                }
+
                 existing.workingHours = workingHours;
                 existing.dayType = dayType;
                 existing.overtimeMinutes = overtimeMinutes;
+
                 await existing.save();
-                return { success: true, type: "CHECK_OUT", data: existing };
+
+                return {
+                    success: true,
+                    type: "CHECK_OUT",
+                    data: existing,
+                };
             }
+
             if (existing) {
-                return { success: true, type: "ALREADY_CHECKED_OUT", data: existing };
+                return {
+                    success: true,
+                    type: "ALREADY_CHECKED_OUT",
+                    data: existing,
+                };
             }
-            const error = new Error("Clock in failed, please try again");
-            error.statusCode = 500;
-            throw error;
+
+            throw new AppError(
+                "Clock in failed, please try again",
+                500
+            );
         }
+
         throw err;
     }
 
@@ -159,7 +266,6 @@ export const clockInOut = async (session) => {
         data: existing,
     };
 };
-
 
 const toLocalDateString = (date) => {
     const d = new Date(date);
@@ -272,13 +378,13 @@ const buildMonthAttendance = async (employeeId, startDate, endDate, joiningDate)
                 isVirtual: true,
             });
         }
-
         current.setDate(current.getDate() + 1);
     }
 
     result.sort((a, b) => new Date(a.date) - new Date(b.date));
     return result;
 };
+
 
 
 export const getAttendance = async (session, query) => {
@@ -288,9 +394,7 @@ export const getAttendance = async (session, query) => {
     });
 
     if (!employee) {
-        const error = new Error("Employee not found");
-        error.statusCode = 404;
-        throw error;
+        throw new AppError("Employee not found", 404);
     }
 
     const month = parseInt(query.month) || (new Date().getMonth() + 1);
