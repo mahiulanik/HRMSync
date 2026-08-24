@@ -199,7 +199,7 @@ export const generatePayroll = async (month, year) => {
 
             const payslipGross = roundMoney(basicSalary + houseRent + medical + conveyance + allowances + overtimeAmount);
 
-            const employeeTotalDeductions = roundMoney(otherDeductions);
+            const employeeTotalDeductions = roundMoney(unpaidLeaveDeduction + otherDeductions);
 
             const netSalary = roundMoney(payslipGross - employeeTotalDeductions);
             
