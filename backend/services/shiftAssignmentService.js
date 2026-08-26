@@ -5,15 +5,32 @@ import AppError from "../utils/AppError.js";
 
 
 export const getMyShifts = async (userId, startDate, endDate) => {
-    const employee = await Employee.findOne({ userId }).lean();
+
+    if (!startDate || !endDate) {
+        throw new AppError("startDate and endDate are required", 400);
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        throw new AppError("Invalid startDate or endDate", 400);
+    }
+
+    if (start > end) {
+        throw new AppError("startDate cannot be greater than endDate", 400);
+    }
+
+    const employee = await Employee.findOne({
+        userId,
+        isDeleted: false
+    }).lean();
 
     if (!employee) {
         throw new AppError("Employee profile not found", 404);
     }
 
-    const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
-    const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
 
     const assignments = await ShiftAssignment.find({
@@ -44,10 +61,16 @@ export const getMyShifts = async (userId, startDate, endDate) => {
 
 export const assignShift = async (assignmentData) => {
 
-    const {employeeId,shiftId,date} = assignmentData;
+    const {employeeId, shiftId, date} = assignmentData;
 
     if (!employeeId || !shiftId || !date) {
         throw new AppError("Employee, shift and date are required", 400);
+    }
+
+    const assignmentDate = new Date(date);
+
+    if (isNaN(assignmentDate.getTime())) {
+        throw new AppError("Invalid date", 400);
     }
 
     const employee = await Employee.findById(employeeId);
@@ -70,17 +93,19 @@ export const assignShift = async (assignmentData) => {
         throw new AppError("Cannot assign an inactive shift", 400);
     }
 
-    const assignmentDate = new Date(date);
     assignmentDate.setHours(0, 0, 0, 0);
 
     const existingAssignment = await ShiftAssignment.findOne({
-            employeeId,
-            date: assignmentDate
-        });
+        employeeId,
+        date: assignmentDate
+    });
 
     if (existingAssignment) {
+
         existingAssignment.shiftId = shiftId;
+
         await existingAssignment.save();
+
         return {
             success: true,
             data: existingAssignment,
@@ -101,7 +126,22 @@ export const assignShift = async (assignmentData) => {
 };
 
 
-export const getEmployeeShiftRoster = async (employeeId,startDate,endDate) => {
+export const getEmployeeShiftRoster = async (employeeId, startDate, endDate) => {
+
+    if (!startDate || !endDate) {
+        throw new AppError("startDate and endDate are required", 400);
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        throw new AppError("Invalid startDate or endDate", 400);
+    }
+
+    if (start > end) {
+        throw new AppError("startDate cannot be greater than endDate", 400);
+    }
 
     const employee = await Employee.findById(employeeId).lean();
 
@@ -109,9 +149,7 @@ export const getEmployeeShiftRoster = async (employeeId,startDate,endDate) => {
         throw new AppError("Employee not found", 404);
     }
 
-    const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
-    const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
 
     const assignments = await ShiftAssignment.find({
@@ -140,16 +178,24 @@ export const getEmployeeShiftRoster = async (employeeId,startDate,endDate) => {
 };
 
 
+export const getEmployeeShiftByDate = async (employeeId, date) => {
 
-export const getEmployeeShiftByDate = async (employeeId,date) => {
+    if (!date) {
+        throw new AppError("Date is required", 400);
+    }
 
     const assignmentDate = new Date(date);
+
+    if (isNaN(assignmentDate.getTime())) {
+        throw new AppError("Invalid date", 400);
+    }
+
     assignmentDate.setHours(0, 0, 0, 0);
 
     const assignment = await ShiftAssignment.findOne({
-            employeeId,
-            date: assignmentDate
-        })
+        employeeId,
+        date: assignmentDate
+    })
         .populate("shiftId")
         .lean();
 
@@ -169,7 +215,7 @@ export const getEmployeeShiftByDate = async (employeeId,date) => {
 };
 
 
-export const updateShiftAssignment = async (id,shiftId) => {
+export const updateShiftAssignment = async (id, shiftId) => {
 
     if (!shiftId) {
         throw new AppError("Shift ID is required", 400);
@@ -192,9 +238,13 @@ export const updateShiftAssignment = async (id,shiftId) => {
     }
 
     assignment.shiftId = shiftId;
+
     await assignment.save();
 
-    const updatedAssignment = await ShiftAssignment.findById(assignment._id).populate("shiftId").lean();
+    const updatedAssignment =
+        await ShiftAssignment.findById(assignment._id)
+            .populate("shiftId")
+            .lean();
 
     return {
         success: true,
@@ -229,44 +279,69 @@ export const assignShiftForMonth = async (assignmentData) => {
     }
 
     const employee = await Employee.findById(employeeId);
+
     if (!employee) {
         throw new AppError("Employee not found", 404);
     }
+
     if (employee.isDeleted) {
         throw new AppError("Cannot assign shift to a deactivated employee", 403);
     }
 
     const shift = await Shift.findById(shiftId);
+
     if (!shift) {
         throw new AppError("Shift not found", 404);
     }
+
     if (!shift.isActive) {
         throw new AppError("Cannot assign an inactive shift", 400);
     }
 
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
 
+    const endDate = new Date(year, month, 0);
     const daysInMonth = endDate.getDate();
+
     const assigned = [];
     const updated = [];
     const skipped = [];
 
     for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(year, month - 1, day);
+
+        const date = new Date(
+            year,
+            month - 1,
+            day
+        );
+
         date.setHours(0, 0, 0, 0);
 
-        const existing = await ShiftAssignment.findOne({ employeeId, date });
+        const existing =
+            await ShiftAssignment.findOne({
+                employeeId,
+                date
+            });
+
         if (existing) {
+
             if (existing.shiftId.toString() !== shiftId) {
+
                 existing.shiftId = shiftId;
+
                 await existing.save();
+
                 updated.push(day);
             }
+
             continue;
         }
 
-        const assignment = await ShiftAssignment.create({ employeeId, shiftId, date });
+        await ShiftAssignment.create({
+            employeeId,
+            shiftId,
+            date
+        });
+
         assigned.push(day);
     }
 
@@ -278,4 +353,3 @@ export const assignShiftForMonth = async (assignmentData) => {
         skipped
     };
 };
-

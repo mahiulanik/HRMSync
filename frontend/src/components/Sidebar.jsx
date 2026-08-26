@@ -17,7 +17,7 @@ const adminNav = [
 
 const employeeNav = [
   { to: '/employee/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/employee/attendance', icon: LayoutDashboard, label: 'Attendance' },
+  { to: '/employee/attendance', icon: CalendarDays, label: 'Attendance' },
   { to: '/employee/leave', icon: FileText, label: 'Leave' },
   { to: '/employee/shift', icon: Clock, label: 'Shift' },
   { to: '/employee/payslips', icon: DollarSign, label: 'Payslips' },
@@ -31,7 +31,7 @@ export default function Sidebar({ role, isOpen, onToggle }) {
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    api.get('/profile').then(res => setProfile(res.data)).catch(() => {});
+    api.get('/profile').then(res => setProfile(res.data.data)).catch(() => {});
   }, []);
 
   const firstName = profile?.firstName || (role === 'ADMIN' ? 'Admin' : 'Employee');

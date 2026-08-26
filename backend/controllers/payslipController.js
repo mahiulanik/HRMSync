@@ -1,47 +1,26 @@
 import * as payslipService from "../services/payslipService.js";
+import asyncHandler from "../middlewares/asyncHandler.js";
 
 
-export const createUserPayslip = async (req, res) => {
-    try {
-        const result = await payslipService.createPayslip(req.body);
-        return res.status(201).json(result);
+export const createUserPayslip = asyncHandler(async (req, res) => {
+    const result = await payslipService.createPayslip(req.body);
 
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+    return res.status(201).json(result);
+});
 
+export const getUsersPayslips = asyncHandler(async (req, res) => {
+    const result = await payslipService.getPayslips(
+        req.session
+    );
 
-export const getUsersPayslips = async (req, res) => {
-    try {
-        const result = await payslipService.getPayslips(
-            req.session
-        );
-        return res.status(200).json(result);
-    } catch (error) {
+    return res.status(200).json(result);
+});
 
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+export const getUserPayslipById = asyncHandler(async (req, res) => {
+    const result = await payslipService.getPayslipById(
+        req.params.id,
+        req.session
+    );
 
-
-export const getUserPayslipById = async (req, res) => {
-    try {
-        const result = await payslipService.getPayslipById(
-            req.params.id,
-            req.session
-        );
-        return res.status(200).json(result);
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+    return res.status(200).json(result);
+});

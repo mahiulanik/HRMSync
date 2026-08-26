@@ -1,55 +1,33 @@
 import * as leaveService from "../services/leaveService.js";
+import asyncHandler from "../middlewares/asyncHandler.js";
 
 
-export const createUserLeave = async (req, res) => {
-    try {
-        const result = await leaveService.createLeave(
-            req.session.userId,
-            req.body
-        );
 
-        return res.status(201).json(result);
+export const createUserLeave = asyncHandler(async (req, res) => {
+    const result = await leaveService.createLeave(
+        req.session.userId,
+        req.body
+    );
 
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+    return res.status(201).json(result);
+});
 
 
-export const getUserLeaves = async (req, res) => {
-    try {
-        const result = await leaveService.getLeaves(
-            req.session,
-            req.query
-        );
+export const getUserLeaves = asyncHandler(async (req, res) => {
+    const result = await leaveService.getLeaves(
+        req.session,
+        req.query
+    );
 
-        return res.status(200).json(result);
-
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+    return res.status(200).json(result);
+});
 
 
-export const updateUserLeave = async (req, res) => {
-    try {
-        const result = await leaveService.updateLeave(
-            req.params.id,
-            req.body
-        );
+export const updateUserLeave = asyncHandler(async (req, res) => {
+    const result = await leaveService.updateLeave(
+        req.params.id,
+        req.body
+    );
 
-        return res.status(200).json(result);
-
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+    return res.status(200).json(result);
+});

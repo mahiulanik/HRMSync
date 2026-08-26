@@ -1,93 +1,53 @@
 import * as shiftService from "../services/shiftService.js";
+import asyncHandler from "../middlewares/asyncHandler.js";
 
 
-export const createShift = async (req, res) => {
-    try {
-        const result = await shiftService.createShift(req.body);
+export const createShift = asyncHandler(async (req, res) => {
+    const result = await shiftService.createShift(req.body);
 
-        return res.status(201).json(result);
-
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+    return res.status(201).json(result);
+});
 
 
-export const getAllShifts = async (req, res) => {
-    try {
-        const result = await shiftService.getAllShifts();
+export const getAllShifts = asyncHandler(async (req, res) => {
+    const result = await shiftService.getAllShifts();
 
-        return res.status(200).json(result);
-
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+    return res.status(200).json(result);
+});
 
 
-export const getShiftById = async (req, res) => {
-    try {
-        const result = await shiftService.getShiftById(req.params.id);
+export const getShiftById = asyncHandler(async (req, res) => {
+    const result = await shiftService.getShiftById(
+        req.params.id
+    );
 
-        return res.status(200).json(result);
-
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+    return res.status(200).json(result);
+});
 
 
-export const updateShift = async (req, res) => {
-    try {
-        const result = await shiftService.updateShift( req.params.id, req.body);
+export const updateShift = asyncHandler(async (req, res) => {
+    const result = await shiftService.updateShift(
+        req.params.id,
+        req.body
+    );
 
-        return res.status(200).json(result);
-
-    } catch (error) {
-
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+    return res.status(200).json(result);
+});
 
 
-export const deactivateShift = async (req, res) => {
-    try {
+export const deactivateShift = asyncHandler(async (req, res) => {
+    const result = await shiftService.deactivateShift(
+        req.params.id
+    );
 
-        const result = await shiftService.deactivateShift(req.params.id);
-
-        return res.status(200).json(result);
-
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+    return res.status(200).json(result);
+});
 
 
-export const activateShift = async (req, res) => {
-    try {
-        const result = await shiftService.activateShift(req.params.id);
+export const activateShift = asyncHandler(async (req, res) => {
+    const result = await shiftService.activateShift(
+        req.params.id
+    );
 
-        return res.status(200).json(result);
-
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            error: error.message || "Internal Server Error"
-        });
-    }
-};
+    return res.status(200).json(result);
+});

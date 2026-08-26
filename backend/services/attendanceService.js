@@ -2,6 +2,7 @@ import Attendance from "../models/attendanceModel.js"
 import Employee from "../models/employeeModel.js"
 import ShiftAssignment from "../models/shiftAssignmentModel.js"
 import PublicHoliday from "../models/publicHolidayModel.js"
+import Leave from "../models/leaveModel.js";
 import AppError from "../utils/AppError.js";
 
 
@@ -292,9 +293,33 @@ const buildMonthAttendance = async (employeeId, startDate, endDate, joiningDate)
         date: { $gte: startDate, $lte: endDate }
     }).lean();
 
+    const approvedLeaves = await Leave.find({
+        employeeId,
+        status: "APPROVED",
+        startDate: { $lte: endDate },
+        endDate: { $gte: startDate }
+    }).lean();
+
     const recordMap = {};
     records.forEach(r => {
         recordMap[toLocalDateString(r.date)] = r;
+    });
+
+    const leaveMap = {};
+
+    approvedLeaves.forEach(leave => {
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+
+        const current = new Date(start);
+
+        while (current <= end) {
+            leaveMap[toLocalDateString(current)] = leave;
+            current.setDate(current.getDate() + 1);
+        }
     });
 
     let holidays = [];
@@ -339,8 +364,21 @@ const buildMonthAttendance = async (employeeId, startDate, endDate, joiningDate)
         }
 
         const existing = recordMap[dateKey];
+        const approvedLeave = leaveMap[dateKey];
+
         if (existing) {
-            result.push(existing);
+            if (
+                approvedLeave &&
+                (existing.status === "ABSENT")
+            ) {
+                result.push({
+                    ...existing,
+                    status: approvedLeave.leaveType || approvedLeave.leaveName || approvedLeave.name
+                });
+            } else {
+                result.push(existing);
+            }
+
             current.setDate(current.getDate() + 1);
             continue;
         }
@@ -367,7 +405,7 @@ const buildMonthAttendance = async (employeeId, startDate, endDate, joiningDate)
                 _id: `absent-${dateKey}`,
                 employeeId,
                 date: new Date(current),
-                status: "ABSENT",
+                status: approvedLeave ? approvedLeave.type : "ABSENT",
                 checkIn: null,
                 checkOut: null,
                 workingHours: null,

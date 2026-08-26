@@ -1,70 +1,114 @@
 import Employee from "../models/employeeModel.js";
+import AppError from "../utils/AppError.js";
 import { uploadImage } from "./cloudinaryService.js";
 
 
 export const getProfile = async (session) => {
-  const employee = await Employee.findOne({userId: session.userId,});
 
-  if (!employee) {
+    const employee = await Employee.findOne({
+        userId: session.userId,
+        isDeleted: false
+    });
+
+    if (!employee) {
+        if (session.role === "ADMIN") {
+            return {
+                success: true,
+                data: {
+                    firstName: "Admin",
+                    lastName: "",
+                    email: session.email,
+                    role: session.role
+                }
+            };
+        }
+
+        throw new AppError("Employee not found", 404);
+    }
+
     return {
-      firstName: "Admin",
-      lastName: "",
-      email: session.email,
-      role: session.role
+        success: true,
+        data: employee
     };
-  }
-  return employee;
 };
+
 
 export const updateProfile = async (userId, data) => {
-  const employee = await Employee.findOne({userId});
 
-  if (!employee) {
-    throw new Error("Employee not found");
-  }
+    const employee = await Employee.findOne({
+        userId,
+        isDeleted: false
+    });
 
-  if (employee.isDeleted) {
-    throw new Error("Your account is deactivated, you cannot update your profile");
-  }
+    if (!employee) {
+        throw new AppError("Employee not found", 404);
+    }
 
-  employee.bio = data.bio;
-  if (data.firstName) employee.firstName = data.firstName;
-  if (data.lastName !== undefined) employee.lastName = data.lastName;
-  if (data.email) employee.email = data.email;
-  if (data.mobile !== undefined) employee.mobile = data.mobile;
-  if (data.position) employee.position = data.position;
-  if (data.department) employee.department = data.department;
-  await employee.save();
+    if (data.bio !== undefined) {
+        employee.bio = data.bio;
+    }
 
-  return {
-    success: true,
-    message: "Profile updated successfully",
-  };
+    if (data.firstName) {
+        employee.firstName = data.firstName;
+    }
+
+    if (data.lastName !== undefined) {
+        employee.lastName = data.lastName;
+    }
+
+    if (data.email) {
+        employee.email = data.email;
+    }
+
+    if (data.mobile !== undefined) {
+        employee.mobile = data.mobile;
+    }
+
+    if (data.position) {
+        employee.position = data.position;
+    }
+
+    if (data.department) {
+        employee.department = data.department;
+    }
+
+    await employee.save();
+
+    return {
+        success: true,
+        message: "Profile updated successfully",
+        data: employee
+    };
 };
 
+
 export const uploadProfilePic = async (userId, file) => {
-  const employee = await Employee.findOne({ userId });
 
-  if (!employee) {
-    throw new Error("Employee not found");
-  }
+    const employee = await Employee.findOne({
+        userId,
+        isDeleted: false
+    });
 
-  if (employee.isDeleted) {
-    throw new Error("Your account is deactivated");
-  }
+    if (!employee) {
+        throw new AppError("Employee not found", 404);
+    }
 
-  if (!file) {
-    throw new Error("No file uploaded");
-  }
+    if (!file) {
+        throw new AppError("No file uploaded", 400);
+    }
 
-  const result = await uploadImage(file.buffer, "hrms/profile-pics");
+    const result = await uploadImage(
+        file.buffer,
+        "hrms/profile-pics"
+    );
 
-  employee.profilePic = result.secure_url;
-  await employee.save();
+    employee.profilePic = result.secure_url;
 
-  return {
-    success: true,
-    message: "Profile picture updated successfully",
-    profilePic: result.secure_url,
-  };
+    await employee.save();
+
+    return {
+        success: true,
+        message: "Profile picture updated successfully",
+        profilePic: result.secure_url
+    };
 };

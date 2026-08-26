@@ -1,71 +1,47 @@
 import * as payrollService from "../services/payrollService.js";
+import asyncHandler from "../middlewares/asyncHandler.js";
 
 
 
-export const generatePayroll = async (req, res) => {
+export const generatePayroll = asyncHandler(async (req, res) => {
+    const { month, year } = req.body;
 
-    try {
-        const {month, year} = req.body;
-        const result = await payrollService.generatePayroll(month, year);
+    const result = await payrollService.generatePayroll(month, year);
 
-        return res.status(201).json(result);
-
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-                success: false,
-                error: error.message || "Internal Server Error"
-            });
-    }
-};
+    return res.status(201).json(result);
+});
 
 
-export const getCompanyPayroll = async (req, res) => {
+export const getCompanyPayroll = asyncHandler(async (req, res) => {
+    const { month, year } = req.query;
 
-    try {
-        const {month, year} = req.query;
-        const result = await payrollService.getCompanyPayroll(month, year);
+    const result = await payrollService.getCompanyPayroll(month, year);
 
-        return res.status(200).json(result);
-
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-                success: false,
-                error:error.message ||"Internal Server Error"
-            });
-    }
-};
+    return res.status(200).json(result);
+});
 
 
-export const getDepartmentPayroll = async (req, res) => {
+export const getDepartmentPayroll = asyncHandler(async (req, res) => {
+    const { month, year } = req.query;
 
-    try {
-        const {month, year} = req.query;
-        const result = await payrollService.getDepartmentPayroll(req.params.department, month,year);
+    const result = await payrollService.getDepartmentPayroll(
+        req.params.department,
+        month,
+        year
+    );
 
-        return res.status(200).json(result);
-
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-                success: false,
-                error: error.message || "Internal Server Error"
-            });
-    }
-};
+    return res.status(200).json(result);
+});
 
 
+export const getEmployeePayroll = asyncHandler(async (req, res) => {
+    const { month, year } = req.query;
 
-export const getEmployeePayroll = async (req, res) => {
+    const result = await payrollService.getEmployeePayroll(
+        req.params.employeeId,
+        month,
+        year
+    );
 
-    try {
-        const {month, year} = req.query;
-        const result = await payrollService.getEmployeePayroll(req.params.employeeId, month, year);
-
-        return res.status(200).json(result);
-
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-                success: false,
-                error: error.message || "Internal Server Error"
-            });
-    }
-};
+    return res.status(200).json(result);
+});
