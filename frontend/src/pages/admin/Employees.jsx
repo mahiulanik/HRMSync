@@ -2,14 +2,22 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import Avatar from '../../components/Avatar';
-import Badge from '../../components/Badge';
 import AddEmployeeModal from './AddEmployeeModal';
-import { Plus, Search, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
 
 const DEPARTMENTS = [
   'Administration','Human Resources','Finance & Accounts','Sales','Marketing',
   'Customer Support','Operations','Supply Chain','Procurement','Information Technology',
   'Software Development','Legal','Internal Audit','Design','Business Intelligence'
+];
+
+const SORT_OPTIONS = [
+  { value: 'firstName', label: 'Name' },
+  { value: 'department', label: 'Department' },
+  { value: 'position', label: 'Position' },
+  { value: 'grossSalary', label: 'Salary' },
+  { value: 'joiningDate', label: 'Joining Date' },
+  { value: 'createdAt', label: 'Created' },
 ];
 
 export default function AdminEmployees() {
@@ -19,20 +27,30 @@ export default function AdminEmployees() {
   const [dept, setDept] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
+  const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalCount: 0, limit: 10 });
+  const [searchInput, setSearchInput] = useState('');
 
   const fetchEmployees = () => {
     const params = new URLSearchParams();
     if (dept) params.append('department', dept);
     if (showDeleted) params.append('onlyDeleted', 'true');
-    const query = params.toString() ? `?${params.toString()}` : '';
-    api.get(`/employees${query}`).then(res => setEmployees(res.data)).catch(() => {});
+    params.append('page', page);
+    params.append('limit', '12');
+    params.append('sortBy', sortBy);
+    params.append('sortOrder', sortOrder);
+    if (search) params.append('search', search);
+    api.get(`/employees?${params.toString()}`).then(res => {
+      setEmployees(res.data.data || []);
+      setPagination(res.data.pagination || { currentPage: 1, totalPages: 1, totalCount: 0, limit: 12 });
+    }).catch(() => {});
   };
 
-  useEffect(() => { fetchEmployees(); }, [dept, showDeleted]);
+  useEffect(() => { fetchEmployees(); }, [dept, showDeleted, page, sortBy, sortOrder, search]);
 
-  const filtered = employees.filter(emp =>
-    `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => { setPage(1); }, [dept, showDeleted, search]);
 
   return (
     <div>
@@ -52,8 +70,8 @@ export default function AdminEmployees() {
           <input
             type="text"
             placeholder="Search employees..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => { setSearchInput(e.target.value); setSearch(e.target.value); }}
             className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary"
           />
         </div>
@@ -61,6 +79,16 @@ export default function AdminEmployees() {
           <option value="">All Departments</option>
           {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
+        <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setSortOrder('asc'); }} className="px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white">
+          {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>Sort: {o.label}</option>)}
+        </select>
+        <button
+          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+          className="px-4 py-2.5 border border-border rounded-lg hover:bg-page-bg transition-colors flex items-center gap-1 text-sm"
+        >
+          {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+          {sortOrder === 'asc' ? 'Asc' : 'Desc'}
+        </button>
         <button
           onClick={() => setShowDeleted(!showDeleted)}
           className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium transition-colors ${showDeleted ? 'bg-red-50 border-red-300 text-red-600' : 'border-border text-text-secondary hover:bg-page-bg'}`}
@@ -71,7 +99,7 @@ export default function AdminEmployees() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {filtered.map(emp => (
+        {employees.map(emp => (
           <div key={emp._id} onClick={() => navigate(`/admin/employees/${emp._id}`)} className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer hover:shadow-md hover:border-primary/30 transition-all">
             <div className="bg-gradient-to-br from-primary/5 to-primary/10 p-6 flex flex-col items-center">
               <div className="flex gap-2 mb-4">
@@ -86,7 +114,55 @@ export default function AdminEmployees() {
             </div>
           </div>
         ))}
+        {employees.length === 0 && (
+          <div className="col-span-full text-center py-12 text-text-secondary">No employees found</div>
+        )}
       </div>
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+          <div className="text-sm text-text-secondary">
+            Showing {((pagination.currentPage - 1) * pagination.limit) + 1} to {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount} employees
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-2 border border-border rounded-lg hover:bg-page-bg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === pagination.totalPages || Math.abs(p - page) <= 1)
+              .reduce((acc, p, i, arr) => {
+                if (i > 0 && p - arr[i - 1] > 1) acc.push('...');
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, i) => (
+                p === '...' ? (
+                  <span key={`dots-${i}`} className="px-1 text-text-secondary">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${page === p ? 'bg-primary text-white' : 'border border-border hover:bg-page-bg'}`}
+                  >
+                    {p}
+                  </button>
+                )
+              ))}
+            <button
+              onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+              disabled={page === pagination.totalPages}
+              className="p-2 border border-border rounded-lg hover:bg-page-bg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <AddEmployeeModal isOpen={showAdd} onClose={() => setShowAdd(false)} onSuccess={fetchEmployees} />
     </div>

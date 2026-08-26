@@ -10,12 +10,17 @@ export const createEmp = asyncHandler(async (req, res) => {
 
 
 export const getEmps = asyncHandler(async (req, res) => {
-    const { department, showDeleted, onlyDeleted } = req.query;
+     const { department, showDeleted, onlyDeleted, page, limit, sortBy, sortOrder, search } = req.query;
 
     const result = await employeeService.getEmployees(
         department,
         showDeleted === "true",
-        onlyDeleted === "true"
+        onlyDeleted === "true",
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search
     );
 
     return res.status(200).json(result);

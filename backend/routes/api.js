@@ -23,7 +23,7 @@ import { createLeaveValidation, getLeavesValidation, updateLeaveValidation } fro
 import { generatePayrollValidation, companyPayrollValidation, departmentPayrollValidation, employeePayrollValidation } from "../validators/payrollValidator.js";
 import { updateProfileValidation } from "../validators/profileValidator.js";
 import {attendanceQueryValidation, adminAttendanceQueryValidation} from "../validators/attendanceValidator.js";
-import {createPayslipValidation, payslipIdValidation} from "../validators/payslipValidator.js";
+import {createPayslipValidation, payslipIdValidation, updatePayslipValidation} from "../validators/payslipValidator.js";
 
 
 
@@ -74,6 +74,7 @@ router.patch("/update-leave/:id", authMiddleware, requiredAdmin, updateLeaveVali
 router.post("/create-payslip", authMiddleware, requiredAdmin, createPayslipValidation, validate, payslipController.createUserPayslip)
 router.get("/get-payslips", authMiddleware, payslipController.getUsersPayslips)
 router.get("/get-payslip-by-id/:id", authMiddleware, payslipIdValidation, validate, payslipController.getUserPayslipById)
+router.put("/update-payslip/:id", authMiddleware, requiredAdmin, updatePayslipValidation, validate, payslipController.updateUserPayslip)
 
 
 // Dashboard Route

@@ -54,13 +54,13 @@ export default function AdminAttendance() {
 
   useEffect(() => {
     if (department) {
-      api.get(`/employees?department=${department}`).then(res => {
-        const list = Array.isArray(res.data) ? res.data : (res.data.employees || []);
+      api.get(`/employees?department=${department}&limit=100`).then(res => {
+      const list = Array.isArray(res.data) ? res.data : (res.data.data || res.data.employees || []);
         setEmployeeList(list.filter(e => !e.isDeleted));
       }).catch(() => setEmployeeList([]));
     } else {
-      api.get('/employees').then(res => {
-        const list = Array.isArray(res.data) ? res.data : (res.data.employees || []);
+      api.get('/employees?limit=100').then(res => {
+      const list = Array.isArray(res.data) ? res.data : (res.data.data || res.data.employees || []);
         setEmployeeList(list.filter(e => !e.isDeleted));
       }).catch(() => setEmployeeList([]));
     }

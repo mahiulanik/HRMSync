@@ -21,7 +21,7 @@ export default function AdminPayroll() {
   const [employees, setEmployees] = useState([]);
   const [viewTab, setViewTab] = useState('company');
 
-  useEffect(() => { api.get('/employees').then(res => setEmployees(res.data || [])).catch(() => {}); }, []);
+  useEffect(() => { api.get('/employees?limit=100').then(res => setEmployees(res.data.data || res.data || [])).catch(() => {}); }, []);
 
   const fetchCompanyPayroll = () => {
     api.get(`/company-payroll?month=${month}&year=${year}`).then(res => { setCompanyPayroll(res.data.data); setMsg(''); }).catch(() => { setCompanyPayroll(null); });

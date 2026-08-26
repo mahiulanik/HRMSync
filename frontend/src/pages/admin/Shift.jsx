@@ -1,8 +1,58 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../api/axios';
 import { Plus, Pencil, Trash2, Search, Calendar } from 'lucide-react';
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function SearchableSelect({ label, value, options, selectedLabel, onSelect, placeholder }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const filtered = options.filter(o =>
+    o.label.toLowerCase().includes(query.toLowerCase())
+  );
+
+  return (
+    <div ref={ref} className="relative">
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      <div className="relative">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+        <input
+          type="text"
+          value={open ? query : (selectedLabel || '')}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => { setOpen(true); setQuery(''); }}
+          placeholder={placeholder || 'Search...'}
+          className="w-full pl-9 pr-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary text-sm"
+        />
+      </div>
+      {open && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-text-secondary">No results found</div>
+          ) : (
+            filtered.map(opt => (
+              <div
+                key={opt.value}
+                onClick={() => { onSelect(opt.value); setQuery(''); setOpen(false); }}
+                className={`px-3 py-2.5 text-sm cursor-pointer hover:bg-page-bg transition-colors ${value === opt.value ? 'bg-primary/5 text-primary font-medium' : ''}`}
+              >
+                {opt.label}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminShift() {
   const [tab, setTab] = useState('shifts');
@@ -13,8 +63,6 @@ export default function AdminShift() {
   const [editingShift, setEditingShift] = useState(null);
   const [shiftForm, setShiftForm] = useState({ name: '', startTime: '', endTime: '', graceMinutes: 15, weekends: [] });
   const [selectedEmployee, setSelectedEmployee] = useState('');
-  const [employeeSearch, setEmployeeSearch] = useState('');
-  const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
   const [selectedShift, setSelectedShift] = useState('');
   const [assignDate, setAssignDate] = useState('');
   const [assignMonth, setAssignMonth] = useState(new Date().getMonth() + 1);
@@ -32,7 +80,7 @@ export default function AdminShift() {
   const [holidayForm, setHolidayForm] = useState({ name: '', startDate: '', endDate: '' });
 
   const fetchShifts = () => { api.get('/shifts').then(res => setShifts(res.data.data || [])).catch(() => {}); };
-  const fetchEmployees = () => { api.get('/employees').then(res => setEmployees(res.data || [])).catch(() => {}); };
+  const fetchEmployees = () => { api.get('/employees?limit=100').then(res => setEmployees(res.data.data || res.data || [])).catch(() => {}); };
   useEffect(() => { fetchShifts(); fetchEmployees(); fetchPublicHolidays(); }, []);
   const fetchPublicHolidays = () => { api.get('/public-holidays').then(res => setPublicHolidays(res.data.data || [])).catch(() => {}); };
 
@@ -71,13 +119,27 @@ export default function AdminShift() {
   const filteredShifts = shifts.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
   const activeShifts = shifts.filter(s => s.isActive);
 
-  const filteredEmployees = employees
-  .filter(emp => !emp.isDeleted)
-  .filter(emp =>
-    `${emp.firstName} ${emp.lastName}`
-      .toLowerCase()
-      .includes(employeeSearch.toLowerCase())
-  );
+  const employeeOptions = employees
+    .filter(e => !e.isDeleted)
+    .map(e => ({ value: e._id, label: `${e.firstName} ${e.lastName}` }));
+
+  const viewEmployeeOptions = employees
+    .map(e => ({ value: e._id, label: `${e.firstName} ${e.lastName}` }));
+
+  const shiftOptions = activeShifts.map(s => ({
+    value: s._id,
+    label: `${s.name} (${s.startTime} - ${s.endTime})`
+  }));
+
+  const getEmployeeName = (id) => {
+    const emp = employees.find(e => e._id === id);
+    return emp ? `${emp.firstName} ${emp.lastName}` : '';
+  };
+
+  const getShiftName = (id) => {
+    const shift = activeShifts.find(s => s._id === id);
+    return shift ? `${shift.name} (${shift.startTime} - ${shift.endTime})` : '';
+  };
 
   return (
     <div>
@@ -136,8 +198,22 @@ export default function AdminShift() {
             <button onClick={() => setAssignMode('month')} className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${assignMode === 'month' ? 'bg-primary text-white border-primary' : 'border-border text-text-secondary hover:bg-page-bg'}`}>Whole Month</button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <div><label className="block text-sm font-medium mb-1">Employee</label><select value={selectedEmployee} onChange={e => setSelectedEmployee(e.target.value)} className="w-full px-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white"><option value="">Select Employee</option>{employees.filter(e => !e.isDeleted).map(emp => (<option key={emp._id} value={emp._id}>{emp.firstName} {emp.lastName}</option>))}</select></div>
-            <div><label className="block text-sm font-medium mb-1">Shift</label><select value={selectedShift} onChange={e => setSelectedShift(e.target.value)} className="w-full px-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white"><option value="">Select Shift</option>{activeShifts.map(s => (<option key={s._id} value={s._id}>{s.name} ({s.startTime} - {s.endTime})</option>))}</select></div>
+            <SearchableSelect
+              label="Employee"
+              value={selectedEmployee}
+              options={employeeOptions}
+              selectedLabel={getEmployeeName(selectedEmployee)}
+              onSelect={setSelectedEmployee}
+              placeholder="Search employee..."
+            />
+            <SearchableSelect
+              label="Shift"
+              value={selectedShift}
+              options={shiftOptions}
+              selectedLabel={getShiftName(selectedShift)}
+              onSelect={setSelectedShift}
+              placeholder="Search shift..."
+            />
             {assignMode === 'single' ? (
               <div><label className="block text-sm font-medium mb-1">Date</label><input type="date" value={assignDate} onChange={e => setAssignDate(e.target.value)} className="w-full px-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary" /></div>
             ) : (<>
@@ -151,7 +227,16 @@ export default function AdminShift() {
 
       {tab === 'view' && (
         <div>
-          <div className="mb-6"><label className="block text-sm font-medium mb-1">Select Employee</label><select value={viewEmployee} onChange={e => setViewEmployee(e.target.value)} className="w-full px-3 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white"><option value="">Select Employee</option>{employees.map(emp => (<option key={emp._id} value={emp._id}>{emp.firstName} {emp.lastName}</option>))}</select></div>
+          <div className="mb-6">
+            <SearchableSelect
+              label="Select Employee"
+              value={viewEmployee}
+              options={viewEmployeeOptions}
+              selectedLabel={getEmployeeName(viewEmployee)}
+              onSelect={setViewEmployee}
+              placeholder="Search employee..."
+            />
+          </div>
           {viewEmployee && (
             <div className="bg-card border border-border rounded-xl p-4 sm:p-6 mb-6">
               <div className="flex items-center justify-between mb-6">

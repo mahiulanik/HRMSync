@@ -37,8 +37,30 @@ export const createPayslipValidation = [
 ];
 
 
+export const updatePayslipValidation = [
+    param("id")
+        .isMongoId()
+        .withMessage("Invalid payslip ID"),
+
+    body("grossSalary")
+        .optional()
+        .isFloat({ min: 0 })
+        .withMessage("Gross salary must be a valid positive number"),
+
+    body("allowances")
+        .optional()
+        .isFloat({ min: 0 })
+        .withMessage("Allowances must be a valid positive number"),
+
+    body("deductions")
+        .optional()
+        .isFloat({ min: 0 })
+        .withMessage("Deductions must be a valid positive number"),
+];
+
 export const payslipIdValidation = [
     param("id")
         .isMongoId()
         .withMessage("Invalid payslip ID"),
 ];
+

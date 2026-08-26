@@ -76,7 +76,7 @@ export const createEmployee = async (data) => {
 };
 
 
-export const getEmployees = async (department, showDeleted, onlyDeleted) => {
+export const getEmployees = async (department, showDeleted, onlyDeleted, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc', search = '') => {
   const where = {};
 
   if (onlyDeleted) {
@@ -89,21 +89,54 @@ export const getEmployees = async (department, showDeleted, onlyDeleted) => {
     where.department = department;
   }
 
-  const employeeList = await Employee.find(where)
-    .sort({ createdAt: -1 })
-    .populate("userId", "email role")
-    .lean();
+  if (search) {
+    where.$or = [
+      { firstName: { $regex: search, $options: 'i' } },
+      { lastName: { $regex: search, $options: 'i' } },
+      { email: { $regex: search, $options: 'i' } },
+      { position: { $regex: search, $options: 'i' } },
+    ];
+  }
 
-  return employeeList.map((emp) => ({
-    ...emp,
-    id: emp._id.toString(),
-    user: emp.userId
-      ? {
-          email: emp.userId.email,
-          role: emp.userId.role,
-        }
-      : null,
-  }));
+
+  const allowedSorts = ['firstName', 'lastName', 'department', 'position', 'grossSalary', 'employeeStatus', 'joiningDate', 'createdAt'];
+  const safeSortBy = allowedSorts.includes(sortBy) ? sortBy : 'createdAt';
+  const safeSortOrder = sortOrder === 'asc' ? 1 : -1;
+
+  const pageNum = Math.max(1, parseInt(page) || 1);
+  const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 10));
+  const skip = (pageNum - 1) * limitNum;
+
+  const [employeeList, totalCount] = await Promise.all([
+    Employee.find(where)
+      .sort({ [safeSortBy]: safeSortOrder })
+      .skip(skip)
+      .limit(limitNum)
+      .populate('userId', 'email role')
+      .lean(),
+    Employee.countDocuments(where)
+  ]);
+
+  const totalPages = Math.ceil(totalCount / limitNum);
+
+  return {
+    data: employeeList.map((emp) => ({
+      ...emp,
+      id: emp._id.toString(),
+      user: emp.userId
+        ? {
+            email: emp.userId.email,
+            role: emp.userId.role,
+          }
+        : null,
+    })),
+    pagination: {
+      currentPage: pageNum,
+      totalPages,
+      totalCount,
+      limit: limitNum,
+    }
+  };
 };
 
 
