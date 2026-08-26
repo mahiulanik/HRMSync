@@ -44,11 +44,7 @@ export const updateProfile = async (userId, data) => {
         throw new AppError("Employee not found", 404);
     }
 
-    if (data.bio !== undefined) {
-        employee.bio = data.bio;
-    }
-
-    if (data.firstName) {
+    if (data.firstName !== undefined) {
         employee.firstName = data.firstName;
     }
 
@@ -56,7 +52,7 @@ export const updateProfile = async (userId, data) => {
         employee.lastName = data.lastName;
     }
 
-    if (data.email) {
+    if (data.email !== undefined) {
         employee.email = data.email;
     }
 
@@ -64,12 +60,52 @@ export const updateProfile = async (userId, data) => {
         employee.mobile = data.mobile;
     }
 
-    if (data.position) {
+    if (data.position !== undefined) {
         employee.position = data.position;
     }
 
-    if (data.department) {
+    if (data.department !== undefined) {
         employee.department = data.department;
+    }
+
+    if (data.bio !== undefined) {
+        employee.bio = data.bio;
+    }
+
+    if (data.grossSalary !== undefined) {
+        employee.grossSalary = Number(data.grossSalary);
+    }
+
+    if (data.basicSalary !== undefined) {
+        employee.basicSalary = Number(data.basicSalary);
+    }
+
+    if (data.houseRent !== undefined) {
+        employee.houseRent = Number(data.houseRent);
+    }
+
+    if (data.medical !== undefined) {
+        employee.medical = Number(data.medical);
+    }
+
+    if (data.conveyance !== undefined) {
+        employee.conveyance = Number(data.conveyance);
+    }
+
+    if (data.allowances !== undefined) {
+        employee.allowances = Number(data.allowances);
+    }
+
+    if (data.deductions !== undefined) {
+        employee.deductions = Number(data.deductions);
+    }
+
+    if (data.employeeStatus !== undefined) {
+        employee.employeeStatus = data.employeeStatus;
+    }
+
+    if (data.joiningDate !== undefined) {
+        employee.joiningDate = data.joiningDate;
     }
 
     await employee.save();

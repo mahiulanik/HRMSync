@@ -439,7 +439,18 @@ export const getAttendance = async (session, query) => {
     const year = parseInt(query.year) || new Date().getFullYear();
 
     const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+    let endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
+    if (
+        year === today.getFullYear() &&
+        month === today.getMonth() + 1
+    ) {
+        endDate = today;
+    }
 
     const data = await buildMonthAttendance(employee._id, startDate, endDate, employee.joiningDate);
 
