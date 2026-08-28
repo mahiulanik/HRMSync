@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import { getApiError } from "../../utils/apiError";
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/Modal';
 import { User, Lock, Save, Camera } from 'lucide-react';
@@ -26,7 +27,7 @@ export default function EmployeeSettings() {
   const handleFileSelect = (e) => {
     const file = e.target.files[0]; if (!file) return;
     setUploadMsg('');
-    if (file.size > 100 * 1024) { setUploadMsg('Image must be less than 100KB'); e.target.value = ''; return; }
+    if (file.size > 300 * 1024) { setUploadMsg('Image must be less than 100KB'); e.target.value = ''; return; }
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!allowedTypes.includes(file.type)) { setUploadMsg('Only JPG, PNG, WebP and GIF images are allowed'); e.target.value = ''; return; }
     setSelectedFile(file);
@@ -36,12 +37,24 @@ export default function EmployeeSettings() {
   const handleUpload = async () => {
     if (!selectedFile) return; setUploading(true); setUploadMsg('');
     try { const formData = new FormData(); formData.append('profilePic', selectedFile); const res = await api.post('/profile/pic', formData, { headers: { 'Content-Type': 'multipart/form-data' } }); setProfile({ ...profile, profilePic: res.data.profilePic }); setPreview(res.data.profilePic); setUploadMsg('Profile picture updated successfully'); setSelectedFile(null); }
-    catch (err) { setUploadMsg(err.response?.data?.error || 'Failed to upload'); }
+    catch (err) {
+    setUploadMsg(
+        getApiError(err, "Failed to upload")
+    );
+    }
     finally { setUploading(false); }
   };
 
-  const handleProfileSave = async () => { setMsg(''); try { await api.post('/profile', { bio: profile.bio }); setMsg('Profile updated successfully'); } catch { setMsg('Failed to update profile'); } };
-  const handlePasswordChange = async (e) => { e.preventDefault(); setPwMsg(''); try { await api.post('/change-password', passwordForm); setPwMsg('Password changed successfully. Redirecting to login...'); setTimeout(async () => { await logout(); navigate('/', { replace: true }); }, 2000); } catch (err) { setPwMsg(err.response?.data?.error || 'Failed to change password'); } };
+  const handleProfileSave = async () => { setMsg(''); try { await api.post('/profile', { bio: profile.bio }); setMsg('Profile updated successfully'); } catch (err) {
+    setMsg(
+        getApiError(err, "Failed to update profile")
+    );
+    } };
+  const handlePasswordChange = async (e) => { e.preventDefault(); setPwMsg(''); try { await api.post('/change-password', passwordForm); setPwMsg('Password changed successfully. Redirecting to login...'); setTimeout(async () => { await logout(); navigate('/', { replace: true }); }, 2000); } catch (err) {
+    setPwMsg(
+        getApiError(err, "Failed to change password")
+    );
+    } };
 
   const initials = `${profile.firstName?.[0]||''}${profile.lastName?.[0]||''}`.toUpperCase();
 

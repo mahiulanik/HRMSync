@@ -85,8 +85,8 @@ export default function AdminPayslips() {
                 <td className="px-4 sm:px-6 py-4 text-sm font-semibold">৳{p.netSalary?.toLocaleString()}</td>
                 <td className="px-4 sm:px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setEditPayslip(p)} className="text-xs bg-warning/10 text-warning px-3 py-1 rounded-full hover:bg-warning/20 flex items-center gap-1"><Pencil size={12} /> Edit</button>
                     <button onClick={() => handleDownload(p._id)} className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full hover:bg-primary/20 flex items-center gap-1"><Download size={12} /> Download</button>
+                    <button onClick={() => setEditPayslip(p)} className="text-xs bg-warning/10 text-warning px-3 py-1 rounded-full hover:bg-warning/20 flex items-center gap-1"><Pencil size={12} /> Edit</button>
                   </div>
                 </td>
               </tr>

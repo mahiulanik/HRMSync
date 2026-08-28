@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
+import { getApiError } from "../utils/apiError.js";
 import { ArrowLeft, Eye, EyeOff, Mail, KeyRound, Lock, RotateCcw } from 'lucide-react';
 
 export default function LoginPage({ role }) {
@@ -93,7 +94,9 @@ export default function LoginPage({ role }) {
       setOtp(['', '', '', '', '', '']);
       otpRefs.current[0]?.focus();
     } catch (err) {
-      setForgotError(err.response?.data?.error || 'Failed to resend OTP');
+    setForgotError(
+        getApiError(err, "Failed to resend OTP")
+    );
     } finally {
       setForgotLoading(false);
     }
@@ -107,7 +110,9 @@ export default function LoginPage({ role }) {
       const user = await login(email, password, role);
       navigate(user.role === 'ADMIN' ? '/admin/dashboard' : '/employee/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+    setError(
+        getApiError(err, "Login failed")
+    );
     } finally {
       setLoading(false);
     }
@@ -123,7 +128,9 @@ export default function LoginPage({ role }) {
       setForgotMsg('OTP sent to your email');
       setForgotStep(2);
     } catch (err) {
-      setForgotError(err.response?.data?.message || 'Failed to send OTP');
+    setForgotError(
+        getApiError(err, "Failed to send OTP")
+    );
     } finally {
       setForgotLoading(false);
     }
@@ -144,7 +151,9 @@ export default function LoginPage({ role }) {
       setForgotMsg('OTP verified successfully');
       setForgotStep(3);
     } catch (err) {
-      setForgotError(err.response?.data?.message || 'Invalid OTP');
+    setForgotError(
+        getApiError(err, "Invalid OTP")
+    );
     } finally {
       setForgotLoading(false);
     }
@@ -168,7 +177,9 @@ export default function LoginPage({ role }) {
         setPassword('');
       }, 2000);
     } catch (err) {
-      setForgotError(err.response?.data?.message || 'Failed to reset password');
+    setForgotError(
+        getApiError(err, "Failed to reset password")
+    );
     } finally {
       setForgotLoading(false);
     }

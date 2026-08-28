@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
+import { getApiError } from "../../utils/apiError";
 import Modal from '../../components/Modal';
 
 export default function EditPayslipModal({ isOpen, onClose, onSuccess, payslip }) {
@@ -48,8 +49,10 @@ export default function EditPayslipModal({ isOpen, onClose, onSuccess, payslip }
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to update payslip');
-    } finally {
+    setError(
+        getApiError(err, "Failed to update payslip")
+    );
+} finally {
       setLoading(false);
     }
   };

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import { getApiError } from "../../utils/apiError";
 import Avatar from '../../components/Avatar';
 import { ArrowLeft, Save, Trash2, RotateCcw } from 'lucide-react';
 
@@ -188,13 +189,10 @@ export default function EmployeeProfile() {
 
 
         } catch (err) {
-
-            setMsg(
-                err.response?.data?.error ||
-                'Failed to update profile'
-            );
-
-        } finally {
+    setMsg(
+        getApiError(err, "Failed to update employee")
+    );
+} finally {
 
             setSaving(false);
         }
@@ -216,12 +214,10 @@ export default function EmployeeProfile() {
             navigate('/admin/employees');
 
         } catch (err) {
-
-            setMsg(
-                err.response?.data?.error ||
-                'Failed to delete employee'
-            );
-        }
+    setMsg(
+        getApiError(err, "Failed to delete employee")
+    );
+}
     };
 
 

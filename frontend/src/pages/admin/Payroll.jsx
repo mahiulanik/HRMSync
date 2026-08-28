@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
+import { getApiError } from "../../utils/apiError";
 import StatCard from '../../components/StatCard';
 import { DollarSign, Users, Building2, TrendingUp, Loader2 } from 'lucide-react';
 
@@ -42,7 +43,11 @@ export default function AdminPayroll() {
   const handleGenerate = async () => {
     setGenerating(true); setMsg('');
     try { await api.post('/generate-payroll', { month, year }); setMsg('Payroll generated successfully'); fetchCompanyPayroll(); }
-    catch (err) { setMsg(err.response?.data?.error || 'Failed to generate payroll'); }
+    catch (err) {
+    setMsg(
+        getApiError(err, "Failed to generate payroll")
+    );
+}
     finally { setGenerating(false); }
   };
 

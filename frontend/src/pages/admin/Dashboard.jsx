@@ -143,6 +143,7 @@ export default function AdminDashboard() {
           </button>
         </div>
         {attendanceChartData.length > 0 ? (
+          console.log("attendanceChartData:", attendanceChartData),
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={attendanceChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />

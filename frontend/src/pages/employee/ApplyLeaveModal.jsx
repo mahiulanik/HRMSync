@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import api from '../../api/axios';
+import { getApiError } from "../../utils/apiError";
 import Modal from '../../components/Modal';
 import { FileText, Calendar } from 'lucide-react';
 
@@ -20,7 +21,9 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
       onClose();
       setForm({ type: 'SICK', startDate: '', endDate: '', reason: '' });
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to apply for leave');
+    setError(
+        getApiError(err, "Failed to apply for leave")
+    );
     } finally {
       setLoading(false);
     }

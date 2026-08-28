@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import api from '../../api/axios';
+import { getApiError } from "../../utils/apiError";
 import Modal from '../../components/Modal';
 
 const DEPARTMENTS = [
@@ -40,8 +41,10 @@ export default function AddEmployeeModal({ isOpen, onClose, onSuccess }) {
       onClose();
       setForm({ firstName: '', lastName: '', mobile: '', joiningDate: '', bio: '', department: '', position: '', grossSalary: '', allowances: '', deductions: '', email: '', password: '' });
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create employee');
-    } finally {
+    setError(
+        getApiError(err, "Failed to create employee")
+    );
+} finally {
       setLoading(false);
     }
   };

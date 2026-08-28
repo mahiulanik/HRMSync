@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
+import { getApiError } from "../../utils/apiError";
 import StatCard from '../../components/StatCard';
 import Badge from '../../components/Badge';
 import { CalendarCheck, AlertCircle, Clock, LogOut, LogIn } from 'lucide-react';
@@ -43,8 +44,17 @@ export default function EmployeeAttendance() {
       else if (type === 'ALREADY_CHECKED_OUT') setMessage({ text: 'You have already clocked out today.', type: 'info' });
       fetchAttendance();
       setTimeout(() => setMessage({ text: '', type: '' }), 4000);
-    } catch (err) { setMessage({ text: err.response?.data?.error || 'Failed to clock in/out', type: 'error' }); setTimeout(() => setMessage({ text: '', type: '' }), 4000); }
-    finally { setClocking(false); }
+    } catch (err) {
+    setMessage({
+        text: getApiError(err, "Failed to clock in/out"),
+        type: "error"
+    });
+
+    setTimeout(
+        () => setMessage({ text: "", type: "" }),
+        4000
+    );
+    }
   };
 
   const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '-';

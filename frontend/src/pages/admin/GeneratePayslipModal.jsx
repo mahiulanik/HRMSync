@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
+import { getApiError } from "../../utils/apiError";
 import Modal from '../../components/Modal';
 
 export default function GeneratePayslipModal({ isOpen, onClose, onSuccess }) {
@@ -49,8 +50,10 @@ export default function GeneratePayslipModal({ isOpen, onClose, onSuccess }) {
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to generate payslip');
-    } finally {
+    setError(
+        getApiError(err, "Failed to generate payslip")
+    );
+} finally {
       setLoading(false);
     }
   };
