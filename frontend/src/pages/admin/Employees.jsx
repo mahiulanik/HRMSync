@@ -87,7 +87,7 @@ export default function AdminEmployees() {
           className="px-4 py-2.5 border border-border rounded-lg hover:bg-page-bg transition-colors flex items-center gap-1 text-sm"
         >
           {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-          {sortOrder === 'asc' ? 'Asc' : 'Desc'}
+          {sortOrder === 'desc' ? 'Oldest' : 'Newest'}
         </button>
         <button
           onClick={() => setShowDeleted(!showDeleted)}

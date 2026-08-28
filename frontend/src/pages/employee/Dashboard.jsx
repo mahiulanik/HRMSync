@@ -78,7 +78,8 @@ for (const r of (stats.attendanceCalendar || [])) {
   }
   for (let d = 1; d <= daysInMonth; d++) {
     const dayOfWeek = new Date(year, month, d).getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    // Company weekend is Friday (5) & Saturday (6), not the default Sun/Sat.
+    const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
     const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const isFuture = d > today.getDate();
     let status = statusMap[dateKey] || (isFuture ? 'future' : isWeekend ? null : 'ABSENT');
@@ -96,6 +97,7 @@ for (const r of (stats.attendanceCalendar || [])) {
     LATE: 'bg-warning text-white',
     ABSENT: 'bg-danger text-white',
     ON_LEAVE: 'bg-primary text-white',
+    HOLIDAY: 'bg-purple-400 text-white',
     future: 'bg-page-bg text-text-secondary'
   };
 
@@ -172,12 +174,16 @@ for (const r of (stats.attendanceCalendar || [])) {
             <span>Late</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-700" />
-            <span>Absent</span>
+            <div className="w-3 h-3 rounded-full bg-danger" />
+              <span>Absent</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full bg-primary" />
             <span>Leave</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-purple-400" />
+            <span>Holiday</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full bg-gray-500" />
@@ -195,7 +201,7 @@ for (const r of (stats.attendanceCalendar || [])) {
               if (item.status && statusColors[item.status]) {
                 cellClass = statusColors[item.status];
               } else if (item.isWeekend) {
-                cellClass = 'bg-pink-200 text-text-secondary';
+                cellClass = 'bg-gray-400 text-white';
               } else {
                 cellClass = 'bg-page-bg text-text-secondary';
               }

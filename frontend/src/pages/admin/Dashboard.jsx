@@ -10,7 +10,20 @@ import {
   ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
 
-const COLORS = ['#10b981', '#f59e0b', '#f87171'];
+// Colors are keyed by category NAME, not array position — pie slices get
+// filtered out when their value is 0, which used to shift a shared index-based
+// COLORS array and mix up which color landed on which category.
+const LEAVE_COLORS = {
+  Pending: '#f59e0b',   // warning
+  Approved: '#10b981',  // success
+  Rejected: '#f87171'   // danger
+};
+
+const ATTENDANCE_COLORS = {
+  Present: '#10b981',   // success
+  Late: '#f59e0b',      // warning
+  Absent: '#f87171'     // danger
+};
 
 function StatCard({ title, value, icon: Icon, color = 'primary', subtitle }) {
   const colorMap = {
@@ -143,7 +156,6 @@ export default function AdminDashboard() {
           </button>
         </div>
         {attendanceChartData.length > 0 ? (
-          console.log("attendanceChartData:", attendanceChartData),
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={attendanceChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -228,7 +240,7 @@ export default function AdminDashboard() {
                     stroke="none"
                   >
                     {leavePieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={LEAVE_COLORS[entry.name]} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -277,7 +289,7 @@ export default function AdminDashboard() {
                     stroke="none"
                   >
                     {todayAttendancePie.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={ATTENDANCE_COLORS[entry.name]} />
                     ))}
                   </Pie>
                   <Tooltip />

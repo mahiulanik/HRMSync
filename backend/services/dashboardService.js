@@ -8,6 +8,11 @@ import PublicHoliday from "../models/publicHolidayModel.js"
 import Shift from "../models/shiftModel.js"
 import ShiftAssignment from "../models/shiftAssignmentModel.js"
 
+// Company weekend: Friday (5) & Saturday (6)
+const WEEKEND_DAYS = [5, 6];
+const isWeekend = (date) => WEEKEND_DAYS.includes(date.getDay());
+const toDateKey = (date) => date.toISOString().split('T')[0];
+
 export const getDashboard = async (session) => {
     if (session.role === "ADMIN") {
         const now = new Date();
@@ -255,9 +260,73 @@ export const getDashboard = async (session) => {
                 .lean()
         ]);
 
+        // --- Inferred absence: employees don't get an ABSENT attendance record when
+        // they don't check in, so we derive it as (expected - present - late - onLeave),
+        // skipping weekends (Fri/Sat) and public holidays. ---
+        const [
+            employeesForAbsence,
+            leavesInRange,
+            holidaysInRange
+        ] = await Promise.all([
+            Employee.find({ isDeleted: { $ne: true } }).select('createdAt').lean(),
+
+            Leave.find({
+                status: "APPROVED",
+                startDate: { $lte: endOfToday },
+                endDate: { $gte: startOf30DaysAgo }
+            }).select('employeeId startDate endDate').lean(),
+
+            PublicHoliday.find({
+                startDate: { $lte: endOfToday },
+                endDate: { $gte: startOf30DaysAgo }
+            }).select('startDate endDate').lean()
+        ]);
+
+        const holidaySet = new Set();
+        for (const h of holidaysInRange) {
+            const s = new Date(h.startDate);
+            const e = new Date(h.endDate);
+            for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+                holidaySet.add(toDateKey(d));
+            }
+        }
+
+        const leaveCountsByDate = {};
+        for (const l of leavesInRange) {
+            const s = new Date(Math.max(new Date(l.startDate).getTime(), startOf30DaysAgo.getTime()));
+            const e = new Date(Math.min(new Date(l.endDate).getTime(), endOfToday.getTime()));
+            for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+                const key = toDateKey(d);
+                if (!leaveCountsByDate[key]) leaveCountsByDate[key] = new Set();
+                leaveCountsByDate[key].add(String(l.employeeId));
+            }
+        }
+
+        const countExpectedEmployees = (dateStr) => {
+            const dayEnd = new Date(`${dateStr}T23:59:59.999Z`);
+            return employeesForAbsence.filter(e => new Date(e.createdAt) <= dayEnd).length;
+        };
+
+        const applyInferredAbsence = (series) => series.map(d => {
+            const dateStr = d._id;
+            const dateObj = new Date(`${dateStr}T00:00:00`);
+
+            if (isWeekend(dateObj) || holidaySet.has(dateStr)) {
+                return { ...d, absent: 0 };
+            }
+
+            const expected = countExpectedEmployees(dateStr);
+            const onLeave = leaveCountsByDate[dateStr] ? leaveCountsByDate[dateStr].size : 0;
+            const absent = Math.max(expected - d.present - d.late - onLeave, 0);
+
+            return { ...d, absent };
+        });
+
+        const attendanceLast7DaysWithAbsence = applyInferredAbsence(attendanceLast7Days);
+        const attendanceLast30DaysWithAbsence = applyInferredAbsence(attendanceLast30Days);
+
         const todayPresent = todayAttendanceRecords.filter(r => r.status === "PRESENT").length;
         const todayLate = todayAttendanceRecords.filter(r => r.status === "LATE").length;
-        const todayAbsent = todayAttendanceRecords.filter(r => r.status === "ABSENT").length;
 
         const attendanceRate = activeEmployees > 0
             ? Math.round(((todayPresent + todayLate) / activeEmployees) * 100)
@@ -268,6 +337,14 @@ export const getDashboard = async (session) => {
             : 0;
 
         const onLeaveCount = onLeaveToday.length > 0 ? onLeaveToday[0].count : 0;
+
+        // Today's absent count uses the same inference, single day
+        const todayDateStr = toDateKey(startOfToday);
+        let todayAbsent = 0;
+        if (!isWeekend(startOfToday) && !holidaySet.has(todayDateStr)) {
+            const expectedToday = countExpectedEmployees(todayDateStr);
+            todayAbsent = Math.max(expectedToday - todayPresent - todayLate - onLeaveCount, 0);
+        }
 
         const leaveMap = {};
         for (const l of leaveRequests) {
@@ -315,8 +392,8 @@ export const getDashboard = async (session) => {
             } : null,
             overtimeHours,
             onLeaveToday: onLeaveCount,
-            attendanceLast7Days,
-            attendanceLast30Days,
+            attendanceLast7Days: attendanceLast7DaysWithAbsence,
+            attendanceLast30Days: attendanceLast30DaysWithAbsence,
             departmentOverview: departmentAttendance,
             leaveRequests: {
                 pending: leaveMap["PENDING"] || 0,
@@ -426,10 +503,55 @@ export const getDashboard = async (session) => {
         }).sort({ startDate: 1 }).lean()
     ]);
 
+    // Attendance records only ever exist for PRESENT/LATE (nothing writes ABSENT),
+    // so monthAttendanceRecords.length used to equal monthPresent exactly — making
+    // the rate always 100%. Fix: compute the days actually expected to be worked
+    // so far this month (skipping Fri/Sat, public holidays, days before the
+    // employee joined, and approved leave), and divide present days by that.
     const monthPresent = monthAttendanceRecords.filter(r => r.status === "PRESENT" || r.status === "LATE").length;
-    const totalWorkingDays = monthAttendanceRecords.length;
+
+    const holidaysThisMonth = await PublicHoliday.find({
+        startDate: { $lte: endOfMonth },
+        endDate: { $gte: startOfMonth }
+    }).select('startDate endDate').lean();
+
+    const holidaySetMonth = new Set();
+    for (const h of holidaysThisMonth) {
+        const s = new Date(h.startDate);
+        const e = new Date(h.endDate);
+        for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+            holidaySetMonth.add(d.toISOString().split('T')[0]);
+        }
+    }
+
+    const elapsedLeaveDates = new Set();
+    for (const leave of monthLeaves) {
+        const s = new Date(Math.max(new Date(leave.startDate).getTime(), startOfMonth.getTime()));
+        const eRaw = new Date(Math.min(new Date(leave.endDate).getTime(), endOfMonth.getTime()));
+        const e = eRaw < startOfToday ? eRaw : startOfToday;
+        for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+            elapsedLeaveDates.add(d.toISOString().split('T')[0]);
+        }
+    }
+
+    const employeeJoinDate = new Date(employee.createdAt);
+    employeeJoinDate.setHours(0, 0, 0, 0);
+
+    let totalWorkingDays = 0;
+    for (let d = new Date(startOfMonth); d <= startOfToday; d.setDate(d.getDate() + 1)) {
+        const dateKey = d.toISOString().split('T')[0];
+        const isWeekendDay = d.getDay() === 5 || d.getDay() === 6; // Friday, Saturday
+        const isHoliday = holidaySetMonth.has(dateKey);
+        const isBeforeJoining = d < employeeJoinDate;
+        const isOnApprovedLeave = elapsedLeaveDates.has(dateKey);
+
+        if (!isWeekendDay && !isHoliday && !isBeforeJoining && !isOnApprovedLeave) {
+            totalWorkingDays++;
+        }
+    }
+
     const attendanceRate = totalWorkingDays > 0
-        ? Math.round((monthPresent / totalWorkingDays) * 100)
+        ? Math.min(100, Math.round((monthPresent / totalWorkingDays) * 100))
         : 0;
 
     const clockedIn = todayAttendance?.checkIn != null;
@@ -480,6 +602,18 @@ export const getDashboard = async (session) => {
             return cDate.toISOString().split('T')[0] === dateStr;
         })) {
             calendarData.push({ date: new Date(dateStr + 'T00:00:00'), status: 'ON_LEAVE' });
+        }
+    }
+
+    // Public holidays previously weren't sent to the frontend at all, so a holiday
+    // with no attendance record would fall through to the calendar's default
+    // "no record = Absent" logic. Mark them explicitly.
+    for (const dateStr of holidaySetMonth) {
+        if (!calendarData.find(c => {
+            const cDate = new Date(c.date);
+            return cDate.toISOString().split('T')[0] === dateStr;
+        })) {
+            calendarData.push({ date: new Date(dateStr + 'T00:00:00'), status: 'HOLIDAY' });
         }
     }
 
