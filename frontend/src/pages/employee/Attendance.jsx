@@ -35,7 +35,10 @@ export default function EmployeeAttendance() {
   useEffect(() => { fetchAttendance(); }, [month, year]);
 
   const handleClockInOut = async () => {
-    setClocking(true); setMessage({ text: '', type: '' });
+    const previousState = clockedIn;
+    setClockedIn(!clockedIn);
+    setMessage({ text: '', type: '' });
+
     try {
       const res = await api.post('/attendance');
       const { type } = res.data;
@@ -45,17 +48,17 @@ export default function EmployeeAttendance() {
       fetchAttendance();
       setTimeout(() => setMessage({ text: '', type: '' }), 4000);
     } catch (err) {
-    setMessage({
-        text: getApiError(err, "Failed to clock in/out"),
-        type: "error"
-    });
-
-    setTimeout(
-        () => setMessage({ text: "", type: "" }),
-        4000
-    );
+      setClockedIn(previousState);
+      setMessage({
+          text: getApiError(err, "Failed to clock in/out"),
+          type: "error"
+      });
+      setTimeout(
+          () => setMessage({ text: "", type: "" }),
+          4000
+      );
     }
-  };
+};
 
   const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '-';
   const years = []; const currentYear = new Date().getFullYear(); for (let y = currentYear; y >= currentYear - 5; y--) years.push(y);
@@ -102,12 +105,12 @@ export default function EmployeeAttendance() {
       {message.text && (
         <div className={`fixed bottom-24 right-4 sm:right-8 px-4 py-2.5 rounded-lg text-sm font-medium shadow-lg z-50 ${message.type === 'success' ? 'bg-green-50 text-green-600 border border-green-200' : message.type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`}>{message.text}</div>
       )}
-      <button onClick={handleClockInOut} disabled={clocking} className={`fixed bottom-6 right-4 sm:bottom-8 sm:right-8 px-5 sm:px-6 py-3 sm:py-4 rounded-xl flex items-center gap-3 shadow-lg transition-all z-50 disabled:opacity-50 ${clockedIn ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-sidebar hover:bg-sidebar-light text-white'}`}>
-        {clockedIn ? <LogOut size={20} /> : <LogIn size={20} />}
-        <div className="text-left">
-          <div className="font-semibold text-sm text-white">{clocking ? 'Processing...' : (clockedIn ? 'Clock Out' : 'Clock In')}</div>
-          <div className={`text-xs ${clockedIn ? 'text-red-100' : 'text-gray-400'}`}>{clockedIn ? 'Click to end your shift' : 'Click to start your shift'}</div>
-        </div>
+      <button onClick={handleClockInOut} className={`fixed bottom-6 right-4 sm:bottom-8 sm:right-8 px-5 sm:px-6 py-3 sm:py-4 rounded-xl flex items-center gap-3 shadow-lg transition-all z-50 ${clockedIn ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-sidebar hover:bg-sidebar-light text-white'}`}>
+          {clockedIn ? <LogOut size={20} /> : <LogIn size={20} />}
+          <div className="text-left">
+            <div className="font-semibold text-sm text-white">{clockedIn ? 'Clock Out' : 'Clock In'}</div>
+            <div className={`text-xs ${clockedIn ? 'text-red-100' : 'text-gray-400'}`}>{clockedIn ? 'Click to end your shift' : 'Click to start your shift'}</div>
+          </div>
       </button>
     </div>
   );

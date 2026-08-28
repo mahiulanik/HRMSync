@@ -136,27 +136,33 @@ for (const r of (stats.attendanceCalendar || [])) {
       {/* Today's Shift */}
       <SectionCard title="🕐 Today's Shift" className="mb-6">
         {stats.todayShift ? (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="text-lg font-semibold">{stats.todayShift.name}</div>
-              <div className="text-sm text-text-secondary mt-1">
-                {stats.todayShift.startTime} → {stats.todayShift.endTime}
+          stats.todayShift.isWeekend ? (
+            <div className="text-center text-text-secondary text-sm py-4">
+              🎉 It's the weekend — no shift scheduled
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <div className="text-lg font-semibold">{stats.todayShift.name}</div>
+                <div className="text-sm text-text-secondary mt-1">
+                  {stats.todayShift.startTime} → {stats.todayShift.endTime}
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+                  stats.clockedIn
+                    ? 'bg-success/10 text-success'
+                    : 'bg-page-bg text-text-secondary'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${stats.clockedIn ? 'bg-success' : 'bg-text-secondary'}`} />
+                  {stats.clockedIn ? 'Clocked In' : 'Not Clocked In'}
+                </div>
+                {stats.workedTime && (
+                  <div className="text-sm font-semibold text-primary">{stats.workedTime}</div>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-                stats.clockedIn
-                  ? 'bg-success/10 text-success'
-                  : 'bg-page-bg text-text-secondary'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${stats.clockedIn ? 'bg-success' : 'bg-text-secondary'}`} />
-                {stats.clockedIn ? 'Clocked In' : 'Not Clocked In'}
-              </div>
-              {stats.workedTime && (
-                <div className="text-sm font-semibold text-primary">{stats.workedTime}</div>
-              )}
-            </div>
-          </div>
+          )
         ) : (
           <div className="text-center text-text-secondary text-sm py-4">No shift assigned for today</div>
         )}

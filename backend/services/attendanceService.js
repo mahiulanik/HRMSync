@@ -128,37 +128,42 @@ export const clockInOut = async (session) => {
     }
 
     // CHECK IN
-    let status = "PRESENT";
-    let lateMinutes = 0;
+let status = "PRESENT";
+let lateMinutes = 0;
 
-    if (shift) {
+// Company weekend: Friday (5) & Saturday (6)
+const isWeekend = now.getDay() === 5 || now.getDay() === 6;
 
-        const [startHour, startMinute] =
-            shift.startTime.split(":").map(Number);
+if (isWeekend) {
+    status = "WEEKEND";
+} else if (shift) {
 
-        const shiftStart = new Date(now);
+    const [startHour, startMinute] =
+        shift.startTime.split(":").map(Number);
 
-        shiftStart.setHours(
-            startHour,
-            startMinute,
-            0,
-            0
+    const shiftStart = new Date(now);
+
+    shiftStart.setHours(
+        startHour,
+        startMinute,
+        0,
+        0
+    );
+
+    const graceEnd = new Date(
+        shiftStart.getTime() +
+        shift.graceMinutes * 60 * 1000
+    );
+
+    if (now > graceEnd) {
+        status = "LATE";
+
+        lateMinutes = Math.floor(
+            (now.getTime() - graceEnd.getTime()) /
+            (1000 * 60)
         );
-
-        const graceEnd = new Date(
-            shiftStart.getTime() +
-            shift.graceMinutes * 60 * 1000
-        );
-
-        if (now > graceEnd) {
-            status = "LATE";
-
-            lateMinutes = Math.floor(
-                (now.getTime() - graceEnd.getTime()) /
-                (1000 * 60)
-            );
-        }
     }
+}
 
     try {
 

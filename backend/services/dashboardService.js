@@ -424,6 +424,9 @@ export const getDashboard = async (session) => {
     const endOfToday = new Date(today);
     endOfToday.setHours(24, 0, 0, 0);
 
+    // Company weekend: Friday (5) & Saturday (6)
+    const isTodayWeekend = today.getDay() === 5 || today.getDay() === 6;
+
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
 
@@ -437,9 +440,8 @@ export const getDashboard = async (session) => {
         latestPayslip,
         salaryHistory,
         todayShiftAssignment,
-        attendanceCalendar,
-        monthLeaves,
         leaveByType,
+        monthLeaves,
         nextHoliday
     ] = await Promise.all([
         Attendance.findOne({
@@ -469,11 +471,6 @@ export const getDashboard = async (session) => {
             employeeId: employee._id,
             date: { $gte: startOfToday, $lt: endOfToday }
         }).populate('shiftId', 'name startTime endTime weekends').lean(),
-
-        Attendance.find({
-            employeeId: employee._id,
-            date: { $gte: startOfMonth, $lte: endOfMonth }
-        }).select('status date').lean(),
 
         Leave.aggregate([
             {
@@ -508,7 +505,20 @@ export const getDashboard = async (session) => {
     // the rate always 100%. Fix: compute the days actually expected to be worked
     // so far this month (skipping Fri/Sat, public holidays, days before the
     // employee joined, and approved leave), and divide present days by that.
-    const monthPresent = monthAttendanceRecords.filter(r => r.status === "PRESENT" || r.status === "LATE").length;
+    const attendanceDateSet = new Set();
+
+for (const record of monthAttendanceRecords) {
+    const date = new Date(record.date);
+
+    const localDateKey = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Dhaka",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).format(date);
+
+    attendanceDateSet.add(localDateKey);
+}
 
     const holidaysThisMonth = await PublicHoliday.find({
         startDate: { $lte: endOfMonth },
@@ -550,8 +560,12 @@ export const getDashboard = async (session) => {
         }
     }
 
-    const attendanceRate = totalWorkingDays > 0
-        ? Math.min(100, Math.round((monthPresent / totalWorkingDays) * 100))
+    const attendanceRate =
+    totalWorkingDays > 0
+        ? Math.min(
+            100,
+            Math.round((monthPresent / totalWorkingDays) * 100)
+        )
         : 0;
 
     const clockedIn = todayAttendance?.checkIn != null;
@@ -591,7 +605,7 @@ export const getDashboard = async (session) => {
         }
     }
 
-    const calendarData = attendanceCalendar.map(r => ({
+    const calendarData = monthAttendanceRecords.map(r => ({
         date: r.date,
         status: r.status
     }));
@@ -634,10 +648,13 @@ export const getDashboard = async (session) => {
         latestPayslip: latestPayslip ? { ...latestPayslip, id: latestPayslip._id.toString() } : null,
         salaryHistory: salaryHistoryData,
         leaveBalance,
-        todayShift: todayShiftAssignment ? {
+        todayShift: isTodayWeekend
+        ? { name: 'Weekend', isWeekend: true }
+        : todayShiftAssignment ? {
             name: todayShiftAssignment.shiftId?.name || 'N/A',
             startTime: todayShiftAssignment.shiftId?.startTime || '',
-            endTime: todayShiftAssignment.shiftId?.endTime || ''
+            endTime: todayShiftAssignment.shiftId?.endTime || '',
+            isWeekend: false
         } : null,
         clockedIn,
         checkInTime: todayAttendance?.checkIn || null,
