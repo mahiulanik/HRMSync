@@ -328,6 +328,7 @@ const buildMonthAttendance = async (employeeId, startDate, endDate, joiningDate)
     });
 
     let holidays = [];
+
     try {
         holidays = await PublicHoliday.find({
             startDate: { $lte: endDate },
@@ -335,96 +336,154 @@ const buildMonthAttendance = async (employeeId, startDate, endDate, joiningDate)
         }).lean();
     } catch {}
 
-    const holidaySet = new Set();
+    const holidayMap = {};
+
     holidays.forEach(h => {
         const s = new Date(h.startDate);
         const e = new Date(h.endDate);
+
         s.setHours(0, 0, 0, 0);
         e.setHours(23, 59, 59, 999);
+
         const cur = new Date(s);
+
         while (cur <= e) {
-            holidaySet.add(toLocalDateString(cur));
+            holidayMap[toLocalDateString(cur)] = h;
             cur.setDate(cur.getDate() + 1);
         }
     });
 
     const empJoining = joiningDate ? new Date(joiningDate) : null;
-    if (empJoining) empJoining.setHours(0, 0, 0, 0);
 
-    const result = [];
-    const current = new Date(startDate);
-
-    while (current <= endDate) {
-        const dateKey = toLocalDateString(current);
-        const dayOfWeek = current.getDay();
-
-        if (empJoining && current < empJoining) {
-            current.setDate(current.getDate() + 1);
-            continue;
-        }
-
-        if (holidaySet.has(dateKey)) {
-            current.setDate(current.getDate() + 1);
-            continue;
-        }
-
-        const existing = recordMap[dateKey];
-        const approvedLeave = leaveMap[dateKey];
-
-        if (existing) {
-            if (
-                approvedLeave &&
-                (existing.status === "ABSENT")
-            ) {
-                result.push({
-                    ...existing,
-                    status: approvedLeave.leaveType || approvedLeave.leaveName || approvedLeave.name
-                });
-            } else {
-                result.push(existing);
-            }
-
-            current.setDate(current.getDate() + 1);
-            continue;
-        }
-
-        const shiftAssignment = shiftMap[dateKey];
-        if (shiftAssignment && shiftAssignment.shiftId) {
-            const shift = shiftAssignment.shiftId;
-            if (shift.weekends && shift.weekends.includes(dayOfWeek)) {
-                result.push({
-                    _id: `weekend-${dateKey}`,
-                    employeeId,
-                    date: new Date(current),
-                    status: "WEEKEND",
-                    shiftName: shift.name,
-                    isVirtual: true,
-                });
-                current.setDate(current.getDate() + 1);
-                continue;
-            }
-        }
-
-        if (shiftAssignment && shiftAssignment.shiftId) {
-            result.push({
-                _id: `absent-${dateKey}`,
-                employeeId,
-                date: new Date(current),
-                status: approvedLeave ? approvedLeave.type : "ABSENT",
-                checkIn: null,
-                checkOut: null,
-                workingHours: null,
-                dayType: null,
-                lateMinutes: 0,
-                overtimeMinutes: 0,
-                shiftName: shiftAssignment.shiftId.name,
-                isVirtual: true,
-            });
-        }
-        current.setDate(current.getDate() + 1);
+    if (empJoining) {
+        empJoining.setHours(0, 0, 0, 0);
     }
 
-    result.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const result = [];
+const current = new Date(startDate);
+
+while (current <= endDate) {
+    const dateKey = toLocalDateString(current);
+    const dayOfWeek = current.getDay();
+
+    if (empJoining && current < empJoining) {
+        current.setDate(current.getDate() + 1);
+        continue;
+    }
+
+    const existing = recordMap[dateKey];
+    const approvedLeave = leaveMap[dateKey];
+    const holiday = holidayMap[dateKey];
+
+    // ==========================================
+    // 1. HOLIDAY HAS HIGHEST PRIORITY
+    // ==========================================
+    if (holiday) {
+        result.push({
+            ...(existing || {}),
+            _id: existing?._id || `holiday-${employeeId}-${dateKey}`,
+            employeeId,
+            date: existing?.date || new Date(current),
+
+            // Holiday always wins
+            status: "HOLIDAY",
+
+            // Keep original attendance information if exists
+            checkIn: existing?.checkIn || null,
+            checkOut: existing?.checkOut || null,
+            workingHours: existing?.workingHours || 0,
+
+            dayType: "Holiday",
+            holidayName: holiday.name,
+
+            lateMinutes: existing?.lateMinutes || 0,
+            overtimeMinutes: existing?.overtimeMinutes || 0,
+
+            isVirtual: !existing,
+        });
+
+        current.setDate(current.getDate() + 1);
+        continue;
+    }
+
+    // ==========================================
+    // 2. EXISTING ATTENDANCE
+    // ==========================================
+    if (existing) {
+        if (
+            approvedLeave &&
+            existing.status === "ABSENT"
+        ) {
+            result.push({
+                ...existing,
+                status:
+                    approvedLeave.leaveType ||
+                    approvedLeave.leaveName ||
+                    approvedLeave.name
+            });
+        } else {
+            result.push(existing);
+        }
+
+        current.setDate(current.getDate() + 1);
+        continue;
+    }
+
+    // ==========================================
+    // 3. WEEKEND
+    // ==========================================
+    const shiftAssignment = shiftMap[dateKey];
+
+    if (shiftAssignment && shiftAssignment.shiftId) {
+        const shift = shiftAssignment.shiftId;
+
+        if (
+            shift.weekends &&
+            shift.weekends.includes(dayOfWeek)
+        ) {
+            result.push({
+                _id: `weekend-${employeeId}-${dateKey}`,
+                employeeId,
+                date: new Date(current),
+                status: "WEEKEND",
+                shiftName: shift.name,
+                isVirtual: true,
+            });
+
+            current.setDate(current.getDate() + 1);
+            continue;
+        }
+    }
+
+    // ==========================================
+    // 4. ABSENT / LEAVE
+    // ==========================================
+    if (shiftAssignment && shiftAssignment.shiftId) {
+        result.push({
+            _id: `absent-${employeeId}-${dateKey}`,
+            employeeId,
+            date: new Date(current),
+            status: approvedLeave
+                ? approvedLeave.type
+                : "ABSENT",
+            checkIn: null,
+            checkOut: null,
+            workingHours: null,
+            dayType: null,
+            lateMinutes: 0,
+            overtimeMinutes: 0,
+            shiftName: shiftAssignment.shiftId.name,
+            isVirtual: true,
+        });
+    }
+
+    current.setDate(current.getDate() + 1);
+}
+
+    result.sort(
+        (a, b) => new Date(a.date) - new Date(b.date)
+    );
+
     return result;
 };
 
@@ -499,9 +558,18 @@ export const getAdminAttendance = async (query) => {
 
     allAttendance.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    const presentDays = allAttendance.filter(a => a.status === 'PRESENT').length;
-    const lateDays = allAttendance.filter(a => a.status === 'LATE').length;
-    const absentDays = allAttendance.filter(a => a.status === 'ABSENT').length;
+    const presentDays = allAttendance.filter(a =>
+        ['PRESENT', 'LATE', 'WEEKEND', 'SICK', 'CASUAL', 'EARNED', 'HOLIDAY'].includes(a.status)
+        ).length;
+
+    const lateDays = allAttendance.filter(
+        a => a.status === 'LATE'
+        ).length;
+
+    const absentDays = allAttendance.filter(
+        a => a.status === 'ABSENT'
+        ).length;
+
     const totalWorkingHours = allAttendance.reduce((sum, a) => sum + (a.workingHours || 0), 0);
     const workDaysCount = allAttendance.filter(a => a.workingHours).length;
     const avgHours = workDaysCount > 0 ? (totalWorkingHours / workDaysCount).toFixed(1) : '0';

@@ -16,48 +16,143 @@ export default function EmployeeAttendance() {
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
 
-  const fetchAttendance = () => {
-    api.get(`/attendance?month=${month}&year=${year}`).then(res => {
-      const data = res.data.data || [];
-      setAttendance(data);
-      const present = data.filter(a => a.status === 'PRESENT' || a.status === 'LATE').length;
-      const late = data.filter(a => a.status === 'LATE').length;
-      const absent = data.filter(a => a.status === 'ABSENT').length;
-      const totalHrs = data.reduce((sum, a) => sum + (a.workingHours || 0), 0);
-      const workDays = data.filter(a => a.workingHours).length;
-      const avg = workDays ? (totalHrs / workDays) : 0;
-      setStats({ daysPresent: present, lateArrivals: late, daysAbsent: absent, avgHours: `${avg.toFixed(1)} Hrs` });
-      const today = data.find(a => new Date(a.date).toDateString() === new Date().toDateString());
-      setClockedIn(today && today.checkIn && !today.checkOut);
-    }).catch(() => {});
-  };
+  const fetchAttendance = async () => {
+  try {
+    const res = await api.get(
+      `/attendance?month=${month}&year=${year}`
+    );
+
+    const data = res.data.data || [];
+
+    setAttendance(data);
+
+    // =========================
+    // Current Clock In/Out State
+    // =========================
+
+    const today = new Date().toDateString();
+
+    const todayRecord = data.find(
+      a => new Date(a.date).toDateString() === today
+    );
+
+    if (todayRecord) {
+      // Check-in আছে কিন্তু Check-out নেই
+      setClockedIn(
+        Boolean(todayRecord.checkIn && !todayRecord.checkOut)
+      );
+    } else {
+      setClockedIn(false);
+    }
+
+    // =========================
+    // Attendance Statistics
+    // =========================
+
+    const present = data.filter(
+      a =>
+        a.status === "PRESENT" ||
+        a.status === "LATE"
+    ).length;
+
+    const late = data.filter(
+      a => a.status === "LATE"
+    ).length;
+
+    const absent = data.filter(
+      a => a.status === "ABSENT"
+    ).length;
+
+    const totalHrs = data.reduce(
+      (sum, a) => sum + (a.workingHours || 0),
+      0
+    );
+
+    const workDays = data.filter(
+      a => a.workingHours > 0
+    ).length;
+
+    const avg = workDays
+      ? totalHrs / workDays
+      : 0;
+
+    setStats({
+      daysPresent: present,
+      lateArrivals: late,
+      daysAbsent: absent,
+      avgHours: `${avg.toFixed(1)} Hrs`
+    });
+
+  } catch (error) {
+    console.error(
+      "Failed to fetch attendance:",
+      error
+    );
+  }
+};
 
   useEffect(() => { fetchAttendance(); }, [month, year]);
 
   const handleClockInOut = async () => {
-    const previousState = clockedIn;
-    setClockedIn(!clockedIn);
-    setMessage({ text: '', type: '' });
+  if (clocking) return;
 
-    try {
-      const res = await api.post('/attendance');
-      const { type } = res.data;
-      if (type === 'CHECK_IN') setMessage({ text: 'Clocked in successfully!', type: 'success' });
-      else if (type === 'CHECK_OUT') setMessage({ text: 'Clocked out successfully!', type: 'success' });
-      else if (type === 'ALREADY_CHECKED_OUT') setMessage({ text: 'You have already clocked out today.', type: 'info' });
-      fetchAttendance();
-      setTimeout(() => setMessage({ text: '', type: '' }), 4000);
-    } catch (err) {
-      setClockedIn(previousState);
+  setClocking(true);
+  setMessage({ text: '', type: '' });
+
+  try {
+    const res = await api.post('/attendance');
+    const { type } = res.data;
+
+    if (type === 'CHECK_IN') {
+      setClockedIn(true);
       setMessage({
-          text: getApiError(err, "Failed to clock in/out"),
-          type: "error"
+        text: 'Clocked in successfully!',
+        type: 'success'
       });
-      setTimeout(
-          () => setMessage({ text: "", type: "" }),
-          4000
-      );
+    } 
+    
+    else if (type === 'CHECK_OUT') {
+      setClockedIn(false);
+      setMessage({
+        text: 'Clocked out successfully!',
+        type: 'success'
+      });
+    } 
+    
+    else if (type === 'ALREADY_CHECKED_OUT') {
+      setClockedIn(false);
+      setMessage({
+        text: 'You have already clocked out today.',
+        type: 'info'
+      });
     }
+
+    // Attendance table immediately update
+    await fetchAttendance();
+
+    setTimeout(() => {
+      setMessage({
+        text: '',
+        type: ''
+      });
+    }, 4000);
+
+  } catch (err) {
+    setMessage({
+      text: getApiError(err, "Failed to clock in/out"),
+      type: "error"
+    });
+
+    setTimeout(() => {
+      setMessage({
+        text: "",
+        type: ""
+      });
+    }, 4000);
+
+  } finally {
+    setClocking(false);
+  }
 };
 
   const formatTime = (d) => d ? new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '-';
@@ -105,13 +200,31 @@ export default function EmployeeAttendance() {
       {message.text && (
         <div className={`fixed bottom-24 right-4 sm:right-8 px-4 py-2.5 rounded-lg text-sm font-medium shadow-lg z-50 ${message.type === 'success' ? 'bg-green-50 text-green-600 border border-green-200' : message.type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`}>{message.text}</div>
       )}
-      <button onClick={handleClockInOut} className={`fixed bottom-6 right-4 sm:bottom-8 sm:right-8 px-5 sm:px-6 py-3 sm:py-4 rounded-xl flex items-center gap-3 shadow-lg transition-all z-50 ${clockedIn ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-sidebar hover:bg-sidebar-light text-white'}`}>
-          {clockedIn ? <LogOut size={20} /> : <LogIn size={20} />}
-          <div className="text-left">
-            <div className="font-semibold text-sm text-white">{clockedIn ? 'Clock Out' : 'Clock In'}</div>
-            <div className={`text-xs ${clockedIn ? 'text-red-100' : 'text-gray-400'}`}>{clockedIn ? 'Click to end your shift' : 'Click to start your shift'}</div>
-          </div>
-      </button>
+      <button
+  onClick={handleClockInOut}
+  disabled={clocking}
+  className={`fixed bottom-6 right-4 sm:bottom-8 sm:right-8 px-5 sm:px-6 py-3 sm:py-4 rounded-xl flex items-center gap-3 shadow-lg transition-all z-50 ${
+    clockedIn
+      ? 'bg-red-500 hover:bg-red-600 text-white'
+      : 'bg-sidebar hover:bg-sidebar-light text-white'
+  } ${clocking ? 'opacity-70 cursor-not-allowed' : ''}`}
+>
+  {clockedIn ? <LogOut size={20} /> : <LogIn size={20} />}
+
+  <div className="text-left">
+    <div className="font-semibold text-sm text-white">
+      {clockedIn ? 'Clock Out' : 'Clock In'}
+    </div>
+
+    <div className={`text-xs ${
+      clockedIn ? 'text-red-100' : 'text-gray-400'
+    }`}>
+      {clockedIn
+        ? 'Click to end your shift'
+        : 'Click to start your shift'}
+    </div>
+  </div>
+</button>
     </div>
   );
 }

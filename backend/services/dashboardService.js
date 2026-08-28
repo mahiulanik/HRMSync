@@ -411,260 +411,960 @@ export const getDashboard = async (session) => {
     }
 
     const employee = await Employee.findOne({
-        userId: session.userId
-    }).lean();
+    userId: session.userId
+}).lean();
 
-    if (!employee) {
-        throw new AppError("Employee not found", 404);
-    }
-
-    const today = new Date();
-    const startOfToday = new Date(today);
-    startOfToday.setHours(0, 0, 0, 0);
-    const endOfToday = new Date(today);
-    endOfToday.setHours(24, 0, 0, 0);
-
-    // Company weekend: Friday (5) & Saturday (6)
-    const isTodayWeekend = today.getDay() === 5 || today.getDay() === 6;
-
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
-
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
-    const endOfYear = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
-
-    const [
-        todayAttendance,
-        monthAttendanceRecords,
-        pendingLeaves,
-        latestPayslip,
-        salaryHistory,
-        todayShiftAssignment,
-        leaveByType,
-        monthLeaves,
-        nextHoliday
-    ] = await Promise.all([
-        Attendance.findOne({
-            employeeId: employee._id,
-            date: { $gte: startOfToday, $lt: endOfToday }
-        }).lean(),
-
-        Attendance.find({
-            employeeId: employee._id,
-            date: { $gte: startOfMonth, $lte: endOfMonth }
-        }).select('status date').lean(),
-
-        Leave.countDocuments({
-            employeeId: employee._id,
-            status: "PENDING"
-        }),
-
-        Payslip.findOne({
-            employeeId: employee._id
-        }).sort({ createdAt: -1 }).lean(),
-
-        Payslip.find({
-            employeeId: employee._id
-        }).sort({ year: -1, month: -1 }).limit(3).select('month year netSalary grossSalary').lean(),
-
-        ShiftAssignment.findOne({
-            employeeId: employee._id,
-            date: { $gte: startOfToday, $lt: endOfToday }
-        }).populate('shiftId', 'name startTime endTime weekends').lean(),
-
-        Leave.aggregate([
-            {
-                $match: {
-                    employeeId: employee._id,
-                    startDate: { $gte: startOfYear, $lte: endOfYear },
-                    status: { $in: ["APPROVED", "PENDING"] }
-                }
-            },
-            {
-                $group: {
-                    _id: "$type",
-                    count: { $sum: 1 }
-                }
-            }
-        ]),
-
-         Leave.find({
-        employeeId: employee._id,
-        status: "APPROVED",
-        startDate: { $lte: endOfMonth },
-        endDate: { $gte: startOfMonth }
-    }).select('startDate endDate type').lean(),
-
-        PublicHoliday.findOne({
-            startDate: { $gte: today }
-        }).sort({ startDate: 1 }).lean()
-    ]);
-
-    // Attendance records only ever exist for PRESENT/LATE (nothing writes ABSENT),
-    // so monthAttendanceRecords.length used to equal monthPresent exactly — making
-    // the rate always 100%. Fix: compute the days actually expected to be worked
-    // so far this month (skipping Fri/Sat, public holidays, days before the
-    // employee joined, and approved leave), and divide present days by that.
-    const attendanceDateSet = new Set();
-
-for (const record of monthAttendanceRecords) {
-    const date = new Date(record.date);
-
-    const localDateKey = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Asia/Dhaka",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit"
-    }).format(date);
-
-    attendanceDateSet.add(localDateKey);
+if (!employee) {
+    throw new AppError("Employee not found", 404);
 }
 
-    const holidaysThisMonth = await PublicHoliday.find({
-        startDate: { $lte: endOfMonth },
-        endDate: { $gte: startOfMonth }
-    }).select('startDate endDate').lean();
+// ------------------------------------------------------------
+// Date helper
+// ------------------------------------------------------------
 
-    const holidaySetMonth = new Set();
-    for (const h of holidaysThisMonth) {
-        const s = new Date(h.startDate);
-        const e = new Date(h.endDate);
-        for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-            holidaySetMonth.add(d.toISOString().split('T')[0]);
+const getDateKey = (date) => {
+    const d = new Date(date);
+
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+// ------------------------------------------------------------
+// Today
+// ------------------------------------------------------------
+
+const today = new Date();
+
+const startOfToday = new Date(today);
+startOfToday.setHours(0, 0, 0, 0);
+
+const endOfToday = new Date(today);
+endOfToday.setHours(24, 0, 0, 0);
+
+// Company weekend: Friday + Saturday
+const isTodayWeekend =
+    today.getDay() === 5 ||
+    today.getDay() === 6;
+
+// ------------------------------------------------------------
+// Current month
+// ------------------------------------------------------------
+
+const startOfMonth = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    1
+);
+
+const endOfMonth = new Date(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999
+);
+
+// ------------------------------------------------------------
+// Current year
+// ------------------------------------------------------------
+
+const startOfYear = new Date(
+    today.getFullYear(),
+    0,
+    1
+);
+
+const endOfYear = new Date(
+    today.getFullYear(),
+    11,
+    31,
+    23,
+    59,
+    59,
+    999
+);
+
+// ------------------------------------------------------------
+// Fetch dashboard data
+// ------------------------------------------------------------
+
+const [
+    todayAttendance,
+    monthAttendanceRecords,
+    pendingLeaves,
+    latestPayslip,
+    salaryHistory,
+    todayShiftAssignment,
+    leaveByType,
+    monthLeaves,
+    nextHoliday
+] = await Promise.all([
+
+    // Today's attendance
+    Attendance.findOne({
+        employeeId: employee._id,
+        date: {
+            $gte: startOfToday,
+            $lt: endOfToday
         }
+    }).lean(),
+
+    // Current month's attendance
+    Attendance.find({
+        employeeId: employee._id,
+        date: {
+            $gte: startOfMonth,
+            $lte: endOfMonth
+        }
+    })
+        .select("status date checkIn checkOut")
+        .lean(),
+
+    // Pending leaves
+    Leave.countDocuments({
+        employeeId: employee._id,
+        status: "PENDING"
+    }),
+
+    // Latest payslip
+    Payslip.findOne({
+        employeeId: employee._id
+    })
+        .sort({
+            createdAt: -1
+        })
+        .lean(),
+
+    // Salary history
+    Payslip.find({
+        employeeId: employee._id
+    })
+        .sort({
+            year: -1,
+            month: -1
+        })
+        .limit(3)
+        .select(
+            "month year netSalary grossSalary"
+        )
+        .lean(),
+
+    // Today's shift
+    ShiftAssignment.findOne({
+        employeeId: employee._id,
+        date: {
+            $gte: startOfToday,
+            $lt: endOfToday
+        }
+    })
+        .populate(
+            "shiftId",
+            "name startTime endTime weekends"
+        )
+        .lean(),
+
+    // Leave balance
+    Leave.aggregate([
+        {
+            $match: {
+                employeeId: employee._id,
+                startDate: {
+                    $gte: startOfYear,
+                    $lte: endOfYear
+                },
+                status: {
+                    $in: [
+                        "APPROVED",
+                        "PENDING"
+                    ]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: "$type",
+                count: {
+                    $sum: 1
+                }
+            }
+        }
+    ]),
+
+    // Approved leaves overlapping current month
+    Leave.find({
+        employeeId: employee._id,
+        status: "APPROVED",
+        startDate: {
+            $lte: endOfMonth
+        },
+        endDate: {
+            $gte: startOfMonth
+        }
+    })
+        .select(
+            "startDate endDate type"
+        )
+        .lean(),
+
+    // Next public holiday
+    // Next public holiday
+PublicHoliday.findOne({
+    endDate: {
+        $gte: startOfToday
+    }
+})
+    .sort({
+        startDate: 1
+    })
+    .lean()
+]);
+
+// ------------------------------------------------------------
+// Attendance map
+// ------------------------------------------------------------
+
+const attendanceMap = new Map();
+
+for (const record of monthAttendanceRecords) {
+    const dateKey = getDateKey(record.date);
+
+    attendanceMap.set(dateKey, {
+        status: String(
+            record.status || ""
+        ).toUpperCase(),
+
+        date: record.date,
+
+        checkIn:
+            record.checkIn || null,
+
+        checkOut:
+            record.checkOut || null
+    });
+}
+
+// ------------------------------------------------------------
+// Public holidays
+// ------------------------------------------------------------
+
+const holidaysThisMonth =
+    await PublicHoliday.find({
+        startDate: {
+            $lte: endOfMonth
+        },
+        endDate: {
+            $gte: startOfMonth
+        }
+    })
+        .select(
+            "name startDate endDate"
+        )
+        .lean();
+
+const holidaySetMonth = new Set();
+
+const holidayInfoMap = new Map();
+
+for (const holiday of holidaysThisMonth) {
+
+    const holidayStart =
+        new Date(holiday.startDate);
+
+    const holidayEnd =
+        new Date(holiday.endDate);
+
+    for (
+        let d = new Date(holidayStart);
+        d <= holidayEnd;
+        d.setDate(
+            d.getDate() + 1
+        )
+    ) {
+        const dateKey =
+            getDateKey(d);
+
+        holidaySetMonth.add(
+            dateKey
+        );
+
+        holidayInfoMap.set(
+            dateKey,
+            {
+                name:
+                    holiday.name || "Holiday"
+            }
+        );
+    }
+}
+
+// ------------------------------------------------------------
+// Approved leave date map
+// ------------------------------------------------------------
+
+const leaveDateMap = new Map();
+
+for (const leave of monthLeaves) {
+
+    const leaveStart =
+        new Date(
+            leave.startDate
+        );
+
+    const leaveEnd =
+        new Date(
+            leave.endDate
+        );
+
+    const actualStart =
+        leaveStart < startOfMonth
+            ? new Date(startOfMonth)
+            : new Date(leaveStart);
+
+    const actualEnd =
+        leaveEnd > endOfMonth
+            ? new Date(endOfMonth)
+            : new Date(leaveEnd);
+
+    for (
+        let d = new Date(actualStart);
+        d <= actualEnd;
+        d.setDate(
+            d.getDate() + 1
+        )
+    ) {
+        const dateKey =
+            getDateKey(d);
+
+        leaveDateMap.set(
+            dateKey,
+            {
+                status: "ON_LEAVE",
+                type:
+                    leave.type || null
+            }
+        );
+    }
+}
+
+// ------------------------------------------------------------
+// Employee joining date
+// ------------------------------------------------------------
+
+const employeeJoinDate =
+    new Date(
+        employee.joiningDate ||
+        employee.createdAt
+    );
+
+employeeJoinDate.setHours(
+    0,
+    0,
+    0,
+    0
+);
+
+// ------------------------------------------------------------
+// Attendance counters
+//
+// Business rule:
+//
+// PRESENT  = Present
+// LATE     = Present
+// WEEKEND  = Present
+// HOLIDAY  = Present
+// ON_LEAVE = Present
+// ABSENT   = Absent
+//
+// Only ABSENT reduces attendance percentage.
+// ------------------------------------------------------------
+
+let presentDays = 0;
+let lateDays = 0;
+let absentDays = 0;
+let leaveDays = 0;
+let holidayDays = 0;
+let weekendDays = 0;
+let notJoinedDays = 0;
+
+// ------------------------------------------------------------
+// Calendar data
+// ------------------------------------------------------------
+
+const calendarData = [];
+
+// ------------------------------------------------------------
+// Only calculate elapsed days
+// ------------------------------------------------------------
+
+const calculationEnd =
+    new Date(today);
+
+calculationEnd.setHours(
+    0,
+    0,
+    0,
+    0
+);
+
+// ------------------------------------------------------------
+// Generate attendance calendar
+// ------------------------------------------------------------
+
+for (
+    let d = new Date(startOfMonth);
+    d <= calculationEnd;
+    d.setDate(
+        d.getDate() + 1
+    )
+) {
+
+    const currentDate =
+        new Date(d);
+
+    currentDate.setHours(
+        0,
+        0,
+        0,
+        0
+    );
+
+    const dateKey =
+        getDateKey(currentDate);
+
+    const dayOfWeek =
+        currentDate.getDay();
+
+    // --------------------------------------------------------
+    // Employee not joined yet
+    // --------------------------------------------------------
+
+    if (
+        currentDate < employeeJoinDate
+    ) {
+        notJoinedDays++;
+
+        calendarData.push({
+            date: dateKey,
+            status: "NOT_JOINED"
+        });
+
+        continue;
     }
 
-    const elapsedLeaveDates = new Set();
-    for (const leave of monthLeaves) {
-        const s = new Date(Math.max(new Date(leave.startDate).getTime(), startOfMonth.getTime()));
-        const eRaw = new Date(Math.min(new Date(leave.endDate).getTime(), endOfMonth.getTime()));
-        const e = eRaw < startOfToday ? eRaw : startOfToday;
-        for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-            elapsedLeaveDates.add(d.toISOString().split('T')[0]);
-        }
+
+    // --------------------------------------------------------
+    // Public holiday
+    //
+    // HOLIDAY = PRESENT
+    // --------------------------------------------------------
+
+    if (
+        holidaySetMonth.has(
+            dateKey
+        )
+    ) {
+
+        holidayDays++;
+
+        calendarData.push({
+            date: dateKey,
+            status: "HOLIDAY",
+            holidayName:
+                holidayInfoMap.get(
+                    dateKey
+                )?.name || null
+        });
+
+        continue;
     }
 
-    const employeeJoinDate = new Date(employee.createdAt);
-    employeeJoinDate.setHours(0, 0, 0, 0);
 
-    let totalWorkingDays = 0;
-    for (let d = new Date(startOfMonth); d <= startOfToday; d.setDate(d.getDate() + 1)) {
-        const dateKey = d.toISOString().split('T')[0];
-        const isWeekendDay = d.getDay() === 5 || d.getDay() === 6; // Friday, Saturday
-        const isHoliday = holidaySetMonth.has(dateKey);
-        const isBeforeJoining = d < employeeJoinDate;
-        const isOnApprovedLeave = elapsedLeaveDates.has(dateKey);
+        // --------------------------------------------------------
+    // Weekend
+    // Friday + Saturday
+    //
+    // WEEKEND = PRESENT
+    // --------------------------------------------------------
 
-        if (!isWeekendDay && !isHoliday && !isBeforeJoining && !isOnApprovedLeave) {
-            totalWorkingDays++;
-        }
+    const isWeekend =
+        dayOfWeek === 5 ||
+        dayOfWeek === 6;
+
+    if (isWeekend) {
+
+        weekendDays++;
+
+        calendarData.push({
+            date: dateKey,
+            status: "WEEKEND"
+        });
+
+        continue;
     }
 
-    const attendanceRate =
-    totalWorkingDays > 0
-        ? Math.min(
-            100,
-            Math.round((monthPresent / totalWorkingDays) * 100)
+    // --------------------------------------------------------
+    // Approved leave
+    //
+    // ON_LEAVE = PRESENT
+    // --------------------------------------------------------
+
+    const leaveInfo =
+        leaveDateMap.get(
+            dateKey
+        );
+
+    if (leaveInfo) {
+
+        leaveDays++;
+
+        calendarData.push({
+            date: dateKey,
+            status: "ON_LEAVE",
+            leaveType:
+                leaveInfo.type
+        });
+
+        continue;
+    }
+
+
+    // --------------------------------------------------------
+    // Find attendance record
+    // --------------------------------------------------------
+
+    const attendance =
+        attendanceMap.get(
+            dateKey
+        );
+
+    // --------------------------------------------------------
+    // No attendance record
+    //
+    // ONLY THIS = ABSENT
+    // --------------------------------------------------------
+
+    if (!attendance) {
+
+        absentDays++;
+
+        calendarData.push({
+            date: dateKey,
+            status: "ABSENT"
+        });
+
+        continue;
+    }
+
+    // --------------------------------------------------------
+    // PRESENT
+    // --------------------------------------------------------
+
+    if (
+        attendance.status ===
+        "PRESENT"
+    ) {
+
+        presentDays++;
+
+        calendarData.push({
+            date: dateKey,
+            status: "PRESENT",
+            checkIn:
+                attendance.checkIn,
+            checkOut:
+                attendance.checkOut
+        });
+
+        continue;
+    }
+
+    // --------------------------------------------------------
+    // LATE
+    //
+    // LATE = PRESENT
+    // --------------------------------------------------------
+
+    if (
+        attendance.status ===
+        "LATE"
+    ) {
+
+        lateDays++;
+
+        calendarData.push({
+            date: dateKey,
+            status: "LATE",
+            checkIn:
+                attendance.checkIn,
+            checkOut:
+                attendance.checkOut
+        });
+
+        continue;
+    }
+
+    // --------------------------------------------------------
+    // Explicit ABSENT
+    // --------------------------------------------------------
+
+    if (
+        attendance.status ===
+        "ABSENT"
+    ) {
+
+        absentDays++;
+
+        calendarData.push({
+            date: dateKey,
+            status: "ABSENT"
+        });
+
+        continue;
+    }
+
+    // --------------------------------------------------------
+    // Explicit WEEKEND
+    //
+    // WEEKEND = PRESENT
+    // --------------------------------------------------------
+
+    if (
+        attendance.status ===
+        "WEEKEND"
+    ) {
+
+        weekendDays++;
+
+        calendarData.push({
+            date: dateKey,
+            status: "WEEKEND",
+            checkIn:
+                attendance.checkIn,
+            checkOut:
+                attendance.checkOut
+        });
+
+        continue;
+    }
+
+    // --------------------------------------------------------
+    // Unknown status
+    //
+    // Safety fallback = ABSENT
+    // --------------------------------------------------------
+
+    absentDays++;
+
+    calendarData.push({
+        date: dateKey,
+        status: "ABSENT"
+    });
+}
+
+// ------------------------------------------------------------
+// Present-like days
+//
+// Everything except ABSENT / NOT_JOINED
+// is treated as present for attendance rate.
+// ------------------------------------------------------------
+
+const presentLikeDays =
+    presentDays +
+    lateDays +
+    weekendDays +
+    holidayDays +
+    leaveDays;
+
+// ------------------------------------------------------------
+// Total applicable elapsed days
+// ------------------------------------------------------------
+
+const totalElapsedDays =
+    presentLikeDays +
+    absentDays;
+
+// ------------------------------------------------------------
+// Attendance rate
+// ------------------------------------------------------------
+
+const attendanceRate =
+    totalElapsedDays > 0
+        ? Math.round(
+            (
+                presentLikeDays /
+                totalElapsedDays
+            ) * 100
         )
         : 0;
 
-    const clockedIn = todayAttendance?.checkIn != null;
-    let workedMinutes = 0;
-    if (clockedIn) {
-        const checkoutTime = todayAttendance.checkOut || new Date();
-        workedMinutes = Math.floor((checkoutTime - new Date(todayAttendance.checkIn)) / 60000);
+// ------------------------------------------------------------
+// Safety clamp
+// ------------------------------------------------------------
+
+const safeAttendanceRate =
+    Math.min(
+        100,
+        Math.max(
+            0,
+            attendanceRate
+        )
+    );
+
+// ------------------------------------------------------------
+// Clock-in / worked time
+// ------------------------------------------------------------
+
+const clockedIn =
+    todayAttendance?.checkIn != null;
+
+let workedMinutes = 0;
+
+if (clockedIn) {
+
+    const checkoutTime =
+        todayAttendance.checkOut ||
+        new Date();
+
+    workedMinutes =
+        Math.max(
+            0,
+            Math.floor(
+                (
+                    checkoutTime -
+                    new Date(
+                        todayAttendance.checkIn
+                    )
+                ) / 60000
+            )
+        );
+}
+
+const workedHours =
+    Math.floor(
+        workedMinutes / 60
+    );
+
+const workedMins =
+    workedMinutes % 60;
+
+// ------------------------------------------------------------
+// Leave balance
+// ------------------------------------------------------------
+
+const leaveBalance = {
+    SICK: {
+        used: 0,
+        total: 14
+    },
+
+    CASUAL: {
+        used: 0,
+        total: 10
+    },
+
+    EARNED: {
+        used: 0,
+        total: 15
     }
-    const workedHours = Math.floor(workedMinutes / 60);
-    const workedMins = workedMinutes % 60;
+};
 
-    const leaveBalance = {
-        SICK: { used: 0, total: 14 },
-        CASUAL: { used: 0, total: 10 },
-        EARNED: { used: 0, total: 15 }
-    };
-    for (const lt of leaveByType) {
-        if (leaveBalance[lt._id]) {
-            leaveBalance[lt._id].used = lt.count;
-        }
+for (const leave of leaveByType) {
+
+    if (
+        leaveBalance[
+            leave._id
+        ]
+    ) {
+        leaveBalance[
+            leave._id
+        ].used =
+            leave.count;
     }
+}
 
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const salaryHistoryData = salaryHistory.reverse().map(p => ({
-        label: `${monthNames[p.month - 1]} ${p.year}`,
-        netSalary: p.netSalary
-    }));
+// ------------------------------------------------------------
+// Salary history
+// ------------------------------------------------------------
 
-    const leaveDates = new Set();
-    for (const leave of monthLeaves) {
-        const start = new Date(leave.startDate);
-        const end = new Date(leave.endDate);
-        const s = new Date(Math.max(start.getTime(), startOfMonth.getTime()));
-        const e = new Date(Math.min(end.getTime(), endOfMonth.getTime()));
-        for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-            leaveDates.add(d.toISOString().split('T')[0]);
-        }
-    }
+const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+];
 
-    const calendarData = monthAttendanceRecords.map(r => ({
-        date: r.date,
-        status: r.status
-    }));
+const salaryHistoryData =
+    [...salaryHistory]
+        .reverse()
+        .map((p) => ({
+            label:
+                `${monthNames[p.month - 1]} ${p.year}`,
 
-    for (const dateStr of leaveDates) {
-        if (!calendarData.find(c => {
-            const cDate = new Date(c.date);
-            return cDate.toISOString().split('T')[0] === dateStr;
-        })) {
-            calendarData.push({ date: new Date(dateStr + 'T00:00:00'), status: 'ON_LEAVE' });
-        }
-    }
+            netSalary:
+                p.netSalary
+        }));
 
-    // Public holidays previously weren't sent to the frontend at all, so a holiday
-    // with no attendance record would fall through to the calendar's default
-    // "no record = Absent" logic. Mark them explicitly.
-    for (const dateStr of holidaySetMonth) {
-        if (!calendarData.find(c => {
-            const cDate = new Date(c.date);
-            return cDate.toISOString().split('T')[0] === dateStr;
-        })) {
-            calendarData.push({ date: new Date(dateStr + 'T00:00:00'), status: 'HOLIDAY' });
-        }
-    }
+// ------------------------------------------------------------
+// Next holiday
+// ------------------------------------------------------------
 
-    let daysUntilHoliday = null;
-    if (nextHoliday) {
-        const diff = Math.ceil((new Date(nextHoliday.startDate) - today) / (1000 * 60 * 60 * 24));
-        daysUntilHoliday = diff <= 0 ? 0 : diff;
-    }
+let daysUntilHoliday = null;
 
-    return {
-        role: "EMPLOYEE",
-        employee: {
-            ...employee,
-            id: employee._id.toString()
-        },
-        attendanceRate,
-        pendingLeaves,
-        latestPayslip: latestPayslip ? { ...latestPayslip, id: latestPayslip._id.toString() } : null,
-        salaryHistory: salaryHistoryData,
-        leaveBalance,
-        todayShift: isTodayWeekend
-        ? { name: 'Weekend', isWeekend: true }
-        : todayShiftAssignment ? {
-            name: todayShiftAssignment.shiftId?.name || 'N/A',
-            startTime: todayShiftAssignment.shiftId?.startTime || '',
-            endTime: todayShiftAssignment.shiftId?.endTime || '',
-            isWeekend: false
-        } : null,
-        clockedIn,
-        checkInTime: todayAttendance?.checkIn || null,
-        workedTime: clockedIn ? `${workedHours}h ${workedMins}m` : null,
-        attendanceCalendar: calendarData,
-        nextHoliday: nextHoliday ? {
-            name: nextHoliday.name,
-            startDate: nextHoliday.startDate,
-            endDate: nextHoliday.endDate,
-            daysRemaining: daysUntilHoliday
-        } : null
-    };
+if (nextHoliday) {
+    const holidayStart = new Date(nextHoliday.startDate);
+    holidayStart.setHours(0, 0, 0, 0);
+
+    const todayDate = new Date(startOfToday);
+    todayDate.setHours(0, 0, 0, 0);
+
+    const diff = Math.ceil(
+        (holidayStart - todayDate) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    daysUntilHoliday = Math.max(0, diff);
+}
+
+// ------------------------------------------------------------
+// RETURN
+// ------------------------------------------------------------
+
+return {
+    role: "EMPLOYEE",
+
+    employee: {
+        ...employee,
+
+        id:
+            employee._id.toString()
+    },
+
+    // Final attendance percentage
+    attendanceRate:
+        safeAttendanceRate,
+
+    // Attendance breakdown
+    attendanceSummary: {
+        totalDays:
+            totalElapsedDays,
+
+        presentDays:
+            presentDays,
+
+        lateDays:
+            lateDays,
+
+        leaveDays:
+            leaveDays,
+
+        holidayDays:
+            holidayDays,
+
+        weekendDays:
+            weekendDays,
+
+        absentDays:
+            absentDays,
+
+        notJoinedDays:
+            notJoinedDays,
+
+        presentLikeDays:
+            presentLikeDays
+    },
+
+    pendingLeaves,
+
+    latestPayslip:
+        latestPayslip
+            ? {
+                ...latestPayslip,
+
+                id:
+                    latestPayslip._id.toString()
+            }
+            : null,
+
+    salaryHistory:
+        salaryHistoryData,
+
+    leaveBalance,
+
+    todayShift:
+
+        isTodayWeekend
+
+            ? {
+                name: "Weekend",
+                isWeekend: true
+            }
+
+            : todayShiftAssignment
+                ? {
+                    name:
+                        todayShiftAssignment
+                            .shiftId
+                            ?.name ||
+                        "N/A",
+
+                    startTime:
+                        todayShiftAssignment
+                            .shiftId
+                            ?.startTime ||
+                        "",
+
+                    endTime:
+                        todayShiftAssignment
+                            .shiftId
+                            ?.endTime ||
+                        "",
+
+                    isWeekend: false
+                }
+
+                : null,
+
+    clockedIn,
+
+    checkInTime:
+        todayAttendance?.checkIn ||
+        null,
+
+    workedTime:
+        clockedIn
+            ? `${workedHours}h ${workedMins}m`
+            : null,
+
+    attendanceCalendar:
+        calendarData,
+
+    nextHoliday:
+
+        nextHoliday
+
+            ? {
+                name:
+                    nextHoliday.name,
+
+                startDate:
+                    nextHoliday.startDate,
+
+                endDate:
+                    nextHoliday.endDate,
+
+                daysRemaining:
+                    daysUntilHoliday
+            }
+
+            : null
+};
 };

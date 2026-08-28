@@ -1,18 +1,24 @@
-const styles = {
-  APPROVED: 'bg-green-50 text-green-600 border border-green-200',
-  PENDING: 'bg-yellow-50 text-yellow-600 border border-yellow-200',
-  REJECTED: 'bg-red-50 text-red-600 border border-red-200',
-  LATE: 'bg-orange-50 text-orange-600 border border-orange-200',
-  DELETED: 'bg-red-50 text-red-600 border border-red-200',
-  SICK: 'bg-blue-50 text-blue-600 border border-blue-200',
-  CASUAL: 'bg-purple-50 text-purple-600 border border-purple-200',
-  EARNED: 'bg-teal-50 text-teal-600 border border-teal-200',
-};
+const Badge = ({ text }) => {
+  const statusStyles = {
+    PRESENT: "bg-green-100 text-green-700",
+    ABSENT: "bg-red-100 text-red-700",
+    LATE: "bg-orange-100 text-orange-700",
+    SICK: "bg-blue-100 text-blue-700",
+    HOLIDAY: "bg-purple-100 text-purple-700",
+    WEEKEND: "bg-gray-100 text-gray-700",
+  };
 
-export default function Badge({ text }) {
+  const style =
+    statusStyles[text?.toUpperCase()] ||
+    "bg-gray-100 text-gray-700";
+
   return (
-    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${styles[text] || 'bg-gray-50 text-gray-600'}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${style}`}
+    >
       {text}
     </span>
   );
-}
+};
+
+export default Badge;

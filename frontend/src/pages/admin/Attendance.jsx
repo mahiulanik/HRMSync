@@ -22,8 +22,6 @@ export default function AdminAttendance() {
   const [employeeId, setEmployeeId] = useState('');
   const [search, setSearch] = useState('');
   const [employeeList, setEmployeeList] = useState([]);
-  const [publicHolidays, setPublicHolidays] = useState([]);
-  const [shifts, setShifts] = useState([]);
 
   const fetchAttendance = () => {
     const params = new URLSearchParams({ month, year });
@@ -38,19 +36,6 @@ export default function AdminAttendance() {
 
   useEffect(() => { fetchAttendance(); }, [month, year, department, employeeId]);
 
-  useEffect(() => {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
-    api.get('/public-holidays').then(res => {
-      const holidays = (res.data.data || []).filter(h => {
-        const hStart = new Date(h.startDate);
-        const hEnd = new Date(h.endDate);
-        return hStart <= endDate && hEnd >= startDate;
-      });
-      setPublicHolidays(holidays);
-    }).catch(() => {});
-    api.get('/shifts').then(res => setShifts(res.data.data || [])).catch(() => {});
-  }, [month, year]);
 
   useEffect(() => {
     if (department) {
@@ -72,35 +57,6 @@ export default function AdminAttendance() {
     return name.includes(search.toLowerCase());
   });
 
-  const isPublicHoliday = (date) => {
-    const d = new Date(date);
-    return publicHolidays.some(h => {
-      const start = new Date(h.startDate);
-      const end = new Date(h.endDate);
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-      return d >= start && d <= end;
-    });
-  };
-
-  const getHolidayName = (date) => {
-    const d = new Date(date);
-    const holiday = publicHolidays.find(h => {
-      const start = new Date(h.startDate);
-      const end = new Date(h.endDate);
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-      return d >= start && d <= end;
-    });
-    return holiday?.name || '';
-  };
-
-  const isWeekendForEmployee = (date) => {
-    const d = new Date(date);
-    const dayOfWeek = d.getDay();
-    const assignedShift = shifts.find(s => s.isActive && s.weekends?.includes(dayOfWeek));
-    return !!assignedShift;
-  };
 
   const years = [];
   const currentYear = new Date().getFullYear();
@@ -160,29 +116,81 @@ export default function AdminAttendance() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(a => {
-                const holiday = isPublicHoliday(a.date);
-                const weekend = isWeekendForEmployee(a.date);
-                const holidayName = getHolidayName(a.date);
-                return (
-                <tr key={a._id} className={`border-b border-border last:border-0 transition-colors ${
-                  holiday ? 'bg-green-50' : weekend ? 'bg-amber-50' : a.status === 'ABSENT' ? 'bg-red-50/50' : 'hover:bg-page-bg/30'
-                }`}>
-                  <td className="px-4 sm:px-6 py-4 text-sm font-medium">{a.employeeId?.firstName} {a.employeeId?.lastName}</td>
-                  <td className="px-4 sm:px-6 py-4 text-sm text-text-secondary">{a.employeeId?.department || '-'}</td>
-                  <td className="px-4 sm:px-6 py-4 text-sm text-text-secondary">
-                    {new Date(a.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    {holiday && <span className="ml-2 text-xs text-green-600 font-medium">Holiday{holidayName ? ` (${holidayName})` : ''}</span>}
-                    {!holiday && weekend && <span className="ml-2 text-xs text-amber-600 font-medium">Weekend</span>}
-                  </td>
-                  <td className="px-4 sm:px-6 py-4 text-sm">{a.checkIn ? new Date(a.checkIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
-                  <td className="px-4 sm:px-6 py-4 text-sm">{a.checkOut ? new Date(a.checkOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
-                  <td className="px-4 sm:px-6 py-4 text-sm">{a.workingHours ? `${Math.floor(a.workingHours)}h ${Math.round((a.workingHours % 1) * 60)}m` : '-'}</td>
-                  <td className="px-4 sm:px-6 py-4 text-sm">{a.dayType || '-'}</td>
-                  <td className="px-4 sm:px-6 py-4 text-sm"><Badge text={a.status} /></td>
-                </tr>
-                );
-              })}
+              {filtered.map(a => (
+  <tr
+    key={a._id}
+    className={`border-b border-border last:border-0 ${
+      a.status === 'ABSENT'
+        ? 'bg-red-50/50'
+        : a.status === 'WEEKEND'
+        ? 'bg-amber-50/50'
+        : ''
+    }`}
+  >
+    <td className="px-4 sm:px-6 py-4 text-sm font-medium">
+      {a.employeeId?.firstName} {a.employeeId?.lastName}
+    </td>
+
+    <td className="px-4 sm:px-6 py-4 text-sm text-text-secondary">
+      {a.employeeId?.department || '-'}
+    </td>
+
+    <td className="px-4 sm:px-6 py-4 text-sm text-text-secondary">
+      {new Date(a.date).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })}
+    </td>
+
+    <td className="px-4 sm:px-6 py-4 text-sm">
+      {a.checkIn
+        ? new Date(a.checkIn).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          })
+        : '-'}
+    </td>
+
+    <td className="px-4 sm:px-6 py-4 text-sm">
+      {a.checkOut
+        ? new Date(a.checkOut).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          })
+        : '-'}
+    </td>
+
+    <td className="px-4 sm:px-6 py-4 text-sm">
+      {a.workingHours
+        ? `${Math.floor(a.workingHours)}h ${Math.round(
+            (a.workingHours % 1) * 60
+          )}m`
+        : a.checkIn && !a.checkOut
+        ? 'Ongoing'
+        : '-'}
+    </td>
+
+    <td className="px-4 sm:px-6 py-4">
+      {a.dayType ? (
+        <Badge text={a.dayType} />
+      ) : a.checkIn && !a.checkOut ? (
+        <span className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full">
+          In Progress
+        </span>
+      ) : (
+        <span className="text-xs text-text-secondary">-</span>
+      )}
+    </td>
+
+    <td className="px-4 sm:px-6 py-4">
+      <Badge text={a.status} />
+    </td>
+  </tr>
+))}
               {filtered.length === 0 && (
                 <tr><td colSpan={8} className="px-6 py-12 text-center text-text-secondary">No attendance records found</td></tr>
               )}
