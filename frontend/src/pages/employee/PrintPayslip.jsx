@@ -233,7 +233,7 @@ export default function EmployeePrintPayslip() {
       <div className="flex justify-center no-print">
         <button
           onClick={handlePrint}
-          className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+          className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer active:scale-95"
         >
           <Printer size={16} /> Print Payslip
         </button>

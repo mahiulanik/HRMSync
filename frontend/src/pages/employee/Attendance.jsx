@@ -198,7 +198,7 @@ export default function EmployeeAttendance() {
         <select
           value={month}
           onChange={(e) => setMonth(parseInt(e.target.value))}
-          className="px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="cursor-pointer px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           {MONTH_NAMES.map((m, i) => (
             <option key={i} value={i + 1}>
@@ -209,7 +209,7 @@ export default function EmployeeAttendance() {
         <select
           value={year}
           onChange={(e) => setYear(parseInt(e.target.value))}
-          className="px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="cursor-pointer px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           {years.map((y) => (
             <option key={y} value={y}>
@@ -329,7 +329,7 @@ export default function EmployeeAttendance() {
       <button
         onClick={handleClockInOut}
         disabled={clocking}
-        className={`fixed bottom-6 right-4 sm:bottom-8 sm:right-8 px-5 sm:px-6 py-3 sm:py-4 rounded-xl flex items-center gap-3 shadow-lg transition-all z-50 ${
+        className={`cursor-pointer active:scale-95 fixed bottom-6 right-4 sm:bottom-8 sm:right-8 px-5 sm:px-6 py-3 sm:py-4 rounded-xl flex items-center gap-3 shadow-lg transition-all z-50 ${
           clockedIn
             ? "bg-red-500 hover:bg-red-600 text-white"
             : "bg-sidebar hover:bg-sidebar-light text-white"

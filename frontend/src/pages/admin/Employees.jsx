@@ -226,7 +226,7 @@ export default function AdminEmployees() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="p-2 border border-border rounded-lg hover:bg-page-bg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-2 border border-border rounded-lg hover:bg-page-bg disabled:opacity-40 cursor-pointer transition-colors"
             >
               <ChevronLeft size={18} />
             </button>
@@ -251,7 +251,7 @@ export default function AdminEmployees() {
                   <button
                     key={p}
                     onClick={() => setPage(p)}
-                    className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${page === p ? "bg-primary text-white" : "border border-border hover:bg-page-bg"}`}
+                    className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${page === p ? "bg-primary text-white" : "border border-border hover:bg-page-bg cursor-pointer"}`}
                   >
                     {p}
                   </button>
@@ -262,7 +262,7 @@ export default function AdminEmployees() {
                 setPage((p) => Math.min(pagination.totalPages, p + 1))
               }
               disabled={page === pagination.totalPages}
-              className="p-2 border border-border rounded-lg hover:bg-page-bg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-2 border border-border rounded-lg hover:bg-page-bg disabled:opacity-40 cursor-pointer transition-colors"
             >
               <ChevronRight size={18} />
             </button>

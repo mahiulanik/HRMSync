@@ -58,7 +58,7 @@ export default function EmployeeLeave() {
         </div>
         <button
           onClick={() => setShowApply(true)}
-          className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+          className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer active:scale-95"
         >
           <Plus size={18} /> Apply for Leave
         </button>

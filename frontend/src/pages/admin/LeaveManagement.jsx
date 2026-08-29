@@ -85,7 +85,7 @@ export default function AdminLeave() {
         <select
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(Number(e.target.value))}
-          className="px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white"
+          className="cursor-pointer px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white"
         >
           {MONTHS.map((m, i) => (
             <option key={i} value={i + 1}>
@@ -96,7 +96,7 @@ export default function AdminLeave() {
         <select
           value={selectedYear}
           onChange={(e) => setSelectedYear(Number(e.target.value))}
-          className="px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white"
+          className="cursor-pointer px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white"
         >
           {years.map((y) => (
             <option key={y} value={y}>
@@ -170,13 +170,13 @@ export default function AdminLeave() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleStatus(leave._id, "APPROVED")}
-                          className="text-xs bg-green-50 text-green-600 px-3 py-1 rounded-full hover:bg-green-100"
+                          className="text-xs bg-green-50 text-green-600 px-3 py-1 rounded-full hover:bg-green-100 cursor-pointer"
                         >
                           Approve
                         </button>
                         <button
                           onClick={() => handleStatus(leave._id, "REJECTED")}
-                          className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full hover:bg-red-100"
+                          className="cursor-pointer text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full hover:bg-red-100"
                         >
                           Reject
                         </button>

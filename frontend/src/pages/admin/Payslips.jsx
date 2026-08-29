@@ -100,7 +100,7 @@ export default function AdminPayslips() {
         </div>
         <button
           onClick={() => setShowGenerate(true)}
-          className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+          className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer active:scale-95"
         >
           <Plus size={18} /> Generate Payslip
         </button>
@@ -171,13 +171,13 @@ export default function AdminPayslips() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleDownload(p._id)}
-                        className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full hover:bg-primary/20 flex items-center gap-1"
+                        className="cursor-pointer text-xs bg-primary/10 text-primary px-3 py-1 rounded-full hover:bg-primary/20 flex items-center gap-1"
                       >
                         <Download size={12} /> Download
                       </button>
                       <button
                         onClick={() => setEditPayslip(p)}
-                        className="text-xs bg-warning/10 text-warning px-3 py-1 rounded-full hover:bg-warning/20 flex items-center gap-1"
+                        className="cursor-pointer text-xs bg-warning/10 text-warning px-3 py-1 rounded-full hover:bg-warning/20 flex items-center gap-1"
                       >
                         <Pencil size={12} /> Edit
                       </button>

@@ -143,7 +143,7 @@ export default function AdminPayroll() {
         <select
           value={month}
           onChange={(e) => setMonth(Number(e.target.value))}
-          className="px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white"
+          className="cursor-pointer px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white"
         >
           {MONTH_NAMES.map((m, i) => (
             <option key={i} value={i + 1}>
@@ -154,7 +154,7 @@ export default function AdminPayroll() {
         <select
           value={year}
           onChange={(e) => setYear(Number(e.target.value))}
-          className="px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white"
+          className="cursor-pointer px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:border-primary bg-white"
         >
           {years.map((y) => (
             <option key={y} value={y}>
@@ -165,7 +165,7 @@ export default function AdminPayroll() {
         <button
           onClick={handleGenerate}
           disabled={generating}
-          className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50"
+          className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer active:scale-95"
         >
           {generating ? (
             <Loader2 size={18} className="animate-spin" />
@@ -193,7 +193,7 @@ export default function AdminPayroll() {
           <button
             key={t.key}
             onClick={() => setViewTab(t.key)}
-            className={`px-4 sm:px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${viewTab === t.key ? "border-primary text-primary" : "border-transparent text-text-secondary hover:text-text-primary"}`}
+            className={`cursor-pointer px-4 sm:px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${viewTab === t.key ? "border-primary text-primary" : "border-transparent text-text-secondary hover:text-text-primary"}`}
           >
             {t.label}
           </button>

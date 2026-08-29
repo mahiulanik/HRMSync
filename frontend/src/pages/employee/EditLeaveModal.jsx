@@ -127,14 +127,14 @@ export default function EditLeaveModal({ isOpen, onClose, leave, onSuccess }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-page-bg transition-colors"
+            className="cursor-pointer active:scale-95 px-5 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-page-bg transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="cursor-pointer active:scale-95 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             <FileText size={16} /> {loading ? "Updating..." : "Update"}
           </button>

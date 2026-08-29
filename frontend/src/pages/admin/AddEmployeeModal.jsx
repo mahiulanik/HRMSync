@@ -298,14 +298,14 @@ export default function AddEmployeeModal({ isOpen, onClose, onSuccess }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-page-bg transition-colors"
+            className="cursor-pointer active:scale-95 px-5 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-page-bg transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer active:scale-95"
           >
             {loading ? "Creating..." : "Create Employee"}
           </button>

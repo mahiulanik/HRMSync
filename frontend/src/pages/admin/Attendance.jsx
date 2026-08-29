@@ -245,7 +245,7 @@ export default function AdminAttendance() {
         <select
           value={month}
           onChange={(e) => setMonth(parseInt(e.target.value))}
-          className="px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="cursor-pointer px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           {MONTH_NAMES.map((m, i) => (
             <option key={i} value={i + 1}>
@@ -256,7 +256,7 @@ export default function AdminAttendance() {
         <select
           value={year}
           onChange={(e) => setYear(parseInt(e.target.value))}
-          className="px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="cursor-pointer px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           {years.map((y) => (
             <option key={y} value={y}>
@@ -270,7 +270,7 @@ export default function AdminAttendance() {
             setDepartment(e.target.value);
             setEmployeeId("");
           }}
-          className="px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="cursor-pointer px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           <option value="">All Departments</option>
           {DEPARTMENTS.map((d) => (
@@ -282,7 +282,7 @@ export default function AdminAttendance() {
         <select
           value={employeeId}
           onChange={(e) => setEmployeeId(e.target.value)}
-          className="px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="cursor-pointer px-3 py-2 border border-border rounded-lg bg-card text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           <option value="">All Employees</option>
           {employeeList.map((e) => (
@@ -320,7 +320,7 @@ export default function AdminAttendance() {
         <button
           onClick={handleSearch}
           disabled={loading}
-          className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+          className="cursor-pointer active:scale-95 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
         >
           <CalendarDays size={16} />
           Search

@@ -24,7 +24,7 @@ export default function Landing() {
         <div className="space-y-4">
           <button
             onClick={() => navigate("/admin/login")}
-            className="w-full flex items-center justify-between p-5 border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all group"
+            className="cursor-pointer active:scale-95 w-full flex items-center justify-between p-5 border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all group"
           >
             <span className="font-semibold text-lg">Admin Portal</span>
             <ArrowRight
@@ -35,7 +35,7 @@ export default function Landing() {
 
           <button
             onClick={() => navigate("/employee/login")}
-            className="w-full flex items-center justify-between p-5 border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all group"
+            className="cursor-pointer active:scale-95 w-full flex items-center justify-between p-5 border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all group"
           >
             <span className="font-semibold text-lg">Employee Portal</span>
             <ArrowRight

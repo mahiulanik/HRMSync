@@ -172,7 +172,7 @@ export default function EmployeeProfile() {
     <div>
       <button
         onClick={() => navigate("/admin/employees")}
-        className="flex items-center gap-2 text-text-secondary hover:text-text-primary mb-6 text-sm"
+        className="flex items-center gap-2 text-text-secondary hover:text-text-primary mb-6 text-sm cursor-pointer"
       >
         <ArrowLeft size={16} /> Back to employees
       </button>
@@ -201,7 +201,7 @@ export default function EmployeeProfile() {
           {isDeleted && !pendingReactivate ? (
             <button
               onClick={handleReactivate}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer active:scale-95"
             >
               <RotateCcw size={16} /> Reactivate Employee
             </button>
@@ -212,7 +212,7 @@ export default function EmployeeProfile() {
           ) : (
             <button
               onClick={() => setShowDelete(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors cursor-pointer active:scale-95"
             >
               <Trash2 size={16} /> Delete Employee
             </button>
@@ -490,7 +490,7 @@ export default function EmployeeProfile() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="bg-primary hover:bg-primary-hover text-white px-6 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50"
+          className="bg-primary hover:bg-primary-hover text-white px-6 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer active:scale-95"
         >
           <Save size={16} /> {saving ? "Saving..." : "Save Changes"}
         </button>

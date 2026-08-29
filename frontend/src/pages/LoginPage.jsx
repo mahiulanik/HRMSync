@@ -221,7 +221,7 @@ export default function LoginPage({ role }) {
       <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center px-8 sm:px-16 py-12 lg:py-0">
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-text-secondary hover:text-text-primary mb-8 text-sm"
+          className="cursor-pointer flex items-center gap-2 text-text-secondary hover:text-text-primary mb-8 text-sm"
         >
           <ArrowLeft size={16} />
           Back to portals
@@ -273,7 +273,7 @@ export default function LoginPage({ role }) {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -283,7 +283,7 @@ export default function LoginPage({ role }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-primary hover:bg-primary-hover text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
+                className="cursor-pointer active:scale-95 w-full bg-primary hover:bg-primary-hover text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
               >
                 {loading ? "Signing in..." : "Sign in"}
               </button>
@@ -295,7 +295,7 @@ export default function LoginPage({ role }) {
                 setForgotError("");
                 setForgotMsg("");
               }}
-              className="mt-5 flex items-center justify-center gap-2 w-full py-2.5 px-4 text-sm font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 hover:border-primary/50 transition-all duration-200"
+              className="cursor-pointer active:scale-95 mt-5 flex items-center justify-center gap-2 w-full py-2.5 px-4 text-sm font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 hover:border-primary/50 transition-all duration-200"
             >
               <KeyRound size={15} />
               Forgot password?
@@ -348,7 +348,7 @@ export default function LoginPage({ role }) {
                 <button
                   type="submit"
                   disabled={forgotLoading}
-                  className="w-full bg-primary hover:bg-primary-hover text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
+                  className="cursor-pointer active:scale-95 w-full bg-primary hover:bg-primary-hover text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
                 >
                   {forgotLoading ? "Sending..." : "Send OTP"}
                 </button>
@@ -398,7 +398,7 @@ export default function LoginPage({ role }) {
                       type="button"
                       onClick={handleResendOTP}
                       disabled={!canResend || forgotLoading}
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary-hover disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                      className="cursor-pointer active:scale-95 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary-hover disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                     >
                       <RotateCcw
                         size={14}
@@ -441,7 +441,7 @@ export default function LoginPage({ role }) {
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      className="cursor-pointer active:scale-95 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                     >
                       {showNewPassword ? (
                         <EyeOff size={18} />
@@ -463,7 +463,7 @@ export default function LoginPage({ role }) {
 
             <button
               onClick={resetForgot}
-              className="mt-5 flex items-center justify-center gap-2 w-full py-2.5 px-4 text-sm font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 hover:border-primary/50 transition-all duration-200"
+              className="cursor-pointer mt-5 flex items-center justify-center gap-2 w-full py-2.5 px-4 text-sm font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 hover:border-primary/50 transition-all duration-200"
             >
               <ArrowLeft size={15} />
               Back to login

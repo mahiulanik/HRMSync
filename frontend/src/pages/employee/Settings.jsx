@@ -144,7 +144,7 @@ export default function EmployeeSettings() {
             )}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+              className="cursor-pointer absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
             >
               <Camera size={20} className="text-white" />
             </button>
@@ -160,7 +160,7 @@ export default function EmployeeSettings() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-page-bg transition-colors"
+                className="cursor-pointer px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-page-bg transition-colors"
               >
                 Choose Image
               </button>
@@ -236,7 +236,7 @@ export default function EmployeeSettings() {
         <div className="flex justify-end">
           <button
             onClick={handleProfileSave}
-            className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+            className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer active:scale-95"
           >
             <Save size={16} /> Save Changes
           </button>
@@ -258,7 +258,7 @@ export default function EmployeeSettings() {
           </div>
           <button
             onClick={() => setShowPassword(true)}
-            className="px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-page-bg transition-colors self-start"
+            className="cursor-pointer active:scale-95 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-page-bg transition-colors self-start"
           >
             Change
           </button>
@@ -322,13 +322,13 @@ export default function EmployeeSettings() {
             <button
               type="button"
               onClick={() => setShowPassword(false)}
-              className="px-5 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-page-bg transition-colors"
+              className="cursor-pointer active:scale-95 px-5 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-page-bg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors"
+              className="cursor-pointer active:scale-95 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors"
             >
               Update Password
             </button>
