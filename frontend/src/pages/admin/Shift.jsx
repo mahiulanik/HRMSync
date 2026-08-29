@@ -340,7 +340,7 @@ export default function AdminShift() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 sm:px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === t.key ? "border-primary text-primary" : "border-transparent text-text-secondary hover:text-text-primary"}`}
+            className={`px-4 sm:px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer ${tab === t.key ? "border-primary text-primary" : "border-transparent text-text-secondary hover:text-text-primary"}`}
           >
             {t.label}
           </button>
@@ -375,7 +375,7 @@ export default function AdminShift() {
                 });
                 setShowShiftModal(true);
               }}
-              className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+              className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer active:scale-95"
             >
               <Plus size={18} /> Add Shift
             </button>
@@ -513,13 +513,13 @@ export default function AdminShift() {
           <div className="flex gap-3 mb-6">
             <button
               onClick={() => setAssignMode("single")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${assignMode === "single" ? "bg-primary text-white border-primary" : "border-border text-text-secondary hover:bg-page-bg"}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer active:scale-95 ${assignMode === "single" ? "bg-primary text-white border-primary" : "border-border text-text-secondary hover:bg-page-bg"}`}
             >
               Single Day
             </button>
             <button
               onClick={() => setAssignMode("month")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${assignMode === "month" ? "bg-primary text-white border-primary" : "border-border text-text-secondary hover:bg-page-bg"}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer active:scale-95 ${assignMode === "month" ? "bg-primary text-white border-primary" : "border-border text-text-secondary hover:bg-page-bg"}`}
             >
               Whole Month
             </button>
@@ -591,7 +591,7 @@ export default function AdminShift() {
           </div>
           <button
             onClick={handleAssign}
-            className="bg-primary hover:bg-primary-hover text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            className="bg-primary hover:bg-primary-hover text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer active:scale-95"
           >
             {assignMode === "single" ? "Assign Shift" : "Assign for Month"}
           </button>
@@ -949,7 +949,7 @@ export default function AdminShift() {
                 setHolidayForm({ name: "", startDate: "", endDate: "" });
                 setShowHolidayModal(true);
               }}
-              className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+              className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer active:scale-95"
             >
               <Plus size={18} /> Add Public Holiday
             </button>
@@ -1019,7 +1019,7 @@ export default function AdminShift() {
                                 });
                                 setShowHolidayModal(true);
                               }}
-                              className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full hover:bg-blue-100"
+                              className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full hover:bg-blue-100 "
                             >
                               Edit
                             </button>

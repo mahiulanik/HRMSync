@@ -93,7 +93,6 @@ export const createEmployeeValidation = [
 
 ];
 
-
 export const updateEmployeeValidation = [
 
     body("firstName")
@@ -186,7 +185,6 @@ export const updateEmployeeValidation = [
         .optional({ values: "falsy" }),
 
 ];
-
 
 export const employeeIdValidation = [
     param("id")

@@ -18,33 +18,18 @@ export const generatePayroll = async (month, year) => {
     month = Number(month);
     year = Number(year);
 
-    if (!month || month < 1 || month > 12) {
-        throw new AppError("Invalid month", 400);
-    }
-
-    if (!year || year < 2000) {
-        throw new AppError("Invalid year", 400);
-    }
-
     const existingPayroll = await Payroll.findOne({
         month,
         year
     });
 
     if (existingPayroll) {
-        throw new AppError(
-            `Payroll already exists for ${month}/${year}`,
-            409
-        );
+        throw new AppError(`Payroll already exists for ${month}/${year}`, 409);
     }
 
-    const {
-        startDate,
-        endDate
-    } = getMonthDateRange(month, year);
+    const {startDate, endDate} = getMonthDateRange(month, year);
 
-    const workingDates =
-        getWorkingDaysInMonth(month, year);
+    const workingDates = getWorkingDaysInMonth(month, year);
 
     const workingDays = workingDates.length;
 
@@ -56,16 +41,12 @@ export const generatePayroll = async (month, year) => {
     }).lean();
 
     if (!employees.length) {
-        throw new AppError(
-            "No active employees found",
-            404
-        );
+        throw new AppError("No active employees found", 404);
     }
 
     const session = await mongoose.startSession();
 
     try {
-
         session.startTransaction();
 
         const [payroll] = await Payroll.create(
@@ -93,32 +74,14 @@ export const generatePayroll = async (month, year) => {
         for (const employee of employees) {
 
             const employeeId = employee._id;
+            const grossSalary = Number(employee.grossSalary || 0);
+            const basicSalary = Number(employee.basicSalary || grossSalary * 0.5);
+            const houseRent = Number(employee.houseRent || 0);
+            const medical = Number(employee.medical || 0);
+            const conveyance = Number(employee.conveyance || 0);
+            const allowances = Number(employee.allowances || 0);
+            const otherDeductions = Number(employee.deductions || 0);
 
-            const grossSalary =
-                Number(employee.grossSalary || 0);
-
-            const basicSalary =
-                Number(employee.basicSalary || grossSalary * 0.5);
-
-            const houseRent =
-                Number(employee.houseRent || 0);
-
-            const medical =
-                Number(employee.medical || 0);
-
-            const conveyance =
-                Number(employee.conveyance || 0);
-
-            const allowances =
-                Number(employee.allowances || 0);
-
-            const otherDeductions =
-                Number(employee.deductions || 0);
-
-
-            // --------------------------------
-            // ATTENDANCE
-            // --------------------------------
 
             const attendance = await Attendance.find({
                 employeeId,
@@ -130,10 +93,6 @@ export const generatePayroll = async (month, year) => {
                 .session(session)
                 .lean();
 
-
-            // --------------------------------
-            // APPROVED LEAVES
-            // --------------------------------
 
             const approvedLeaves = await Leave.find({
                 employeeId,
@@ -149,89 +108,53 @@ export const generatePayroll = async (month, year) => {
                 .lean();
 
 
-            // --------------------------------
-            // PRESENT DATES
-            // --------------------------------
-
             const presentDates = new Set();
 
             let overtimeMinutes = 0;
 
             for (const record of attendance) {
 
-                const attendanceDate =
-                    normalizeDate(record.date);
+                const attendanceDate = normalizeDate(record.date);
 
-                const dayOfWeek =
-                    attendanceDate.getDay();
+                const dayOfWeek = attendanceDate.getDay();
 
                 // Friday + Saturday
                 if ([5, 6].includes(dayOfWeek)) {
                     continue;
                 }
 
-                const dateKey =
-                    attendanceDate
-                        .toISOString()
-                        .split("T")[0];
+                const dateKey = attendanceDate.toISOString().split("T")[0];
 
                 // Only actual attendance counts
-                if (
-                    record.status === "PRESENT" ||
-                    record.status === "LATE"
-                ) {
+                if (record.status === "PRESENT" || record.status === "LATE") {
                     presentDates.add(dateKey);
                 }
-
-                overtimeMinutes += Number(
-                    record.overtimeMinutes || 0
-                );
+                overtimeMinutes += Number(record.overtimeMinutes || 0);
             }
 
-
-            // --------------------------------
-            // PAID LEAVE DATES
-            // --------------------------------
 
             const paidLeaveDates = new Set();
 
             for (const leave of approvedLeaves) {
 
-                if (
-                    !PAID_LEAVE_TYPES.includes(
-                        leave.type
-                    )
+                if (!PAID_LEAVE_TYPES.includes(leave.type)
                 ) {
                     continue;
                 }
 
-                const leaveStart =
-                    normalizeDate(leave.startDate);
-
-                const leaveEnd =
-                    normalizeDate(leave.endDate);
+                const leaveStart = normalizeDate(leave.startDate);
+                const leaveEnd = normalizeDate(leave.endDate);
 
                 for (const workingDate of workingDates) {
 
-                    if (
-                        workingDate >= leaveStart &&
-                        workingDate <= leaveEnd
-                    ) {
+                    if (workingDate >= leaveStart && workingDate <= leaveEnd) {
 
-                        const dateKey =
-                            workingDate
-                                .toISOString()
-                                .split("T")[0];
-
+                        const dateKey = workingDate.toISOString().split("T")[0];
                         paidLeaveDates.add(dateKey);
                     }
                 }
             }
 
-
-            // --------------------------------
-            // ATTENDANCE OVERRIDES LEAVE
-            // --------------------------------
 
             for (const date of presentDates) {
                 paidLeaveDates.delete(date);
@@ -241,24 +164,10 @@ export const generatePayroll = async (month, year) => {
             // Days Calculation
 
             const presentDays = presentDates.size;
-
             const paidLeaveDays = paidLeaveDates.size;
+            const absentDays = Math.max(workingDays - presentDays - paidLeaveDays, 0);
 
-            const absentDays = Math.max(
-                workingDays - presentDays - paidLeaveDays,
-                0
-            );
-
-
-            // Daily basic salary
-
-            const dailyBasicSalary =
-                workingDays > 0
-                    ? basicSalary / workingDays
-                    : 0;
-
-
-            // Overtime
+            const dailyBasicSalary =  workingDays > 0 ? basicSalary / workingDays : 0;
 
             const overtimeAmount = calculateOvertimeAmount({
                 overtimeMinutes,
@@ -270,18 +179,12 @@ export const generatePayroll = async (month, year) => {
 
             // Gross Salary
 
-            const payslipGross = roundMoney(
-                grossSalary + overtimeAmount
-            );
-
+            const payslipGross = roundMoney(grossSalary + overtimeAmount);
 
             // Attendance Check
 
-            const hasAttendance =
-                presentDates.size > 0;
-
-            const hasPaidLeave =
-                paidLeaveDates.size > 0;
+            const hasAttendance = presentDates.size > 0;
+            const hasPaidLeave = paidLeaveDates.size > 0;
 
 
             // Deduction + Net Salary
@@ -289,68 +192,40 @@ export const generatePayroll = async (month, year) => {
             let unpaidLeaveDeduction = 0;
             let netSalary = 0;
 
-
-            // No attendance + no paid leave
-            // => No salary
-
             if (!hasAttendance && !hasPaidLeave) {
-
-                unpaidLeaveDeduction = roundMoney(
-                    payslipGross
-                );
-
+                unpaidLeaveDeduction = roundMoney(payslipGross);
                 netSalary = 0;
 
             } else {
-
                 unpaidLeaveDeduction = roundMoney(
                     dailyBasicSalary * absentDays
                 );
 
-                const employeeTotalDeductions = roundMoney(
-                    unpaidLeaveDeduction + otherDeductions
-                );
+                const employeeTotalDeductions = roundMoney(unpaidLeaveDeduction + otherDeductions);
 
-                netSalary = roundMoney(
-                    payslipGross - employeeTotalDeductions
-                );
+                netSalary = roundMoney(payslipGross - employeeTotalDeductions);
             }
 
-            const employeeTotalDeductions = roundMoney(
-                unpaidLeaveDeduction + otherDeductions
-            );
-
-            // --------------------------------
             // CREATE PAYSLIP
-            // --------------------------------
 
             await Payslip.create(
                 [
                     {
                         payrollId: payroll._id,
                         employeeId,
-
                         month,
                         year,
-
                         basicSalary,
                         houseRent,
                         medical,
                         conveyance,
                         allowances,
-
                         overtimeAmount,
-
                         grossSalary: payslipGross,
-
                         unpaidLeaveDeduction,
                         otherDeductions,
-
-                        totalDeductions:
-                            employeeTotalDeductions,
-
+                        totalDeductions: employeeTotalDeductions,
                         netSalary,
-
                         workingDays,
                         presentDays,
                         paidLeaveDays,
@@ -363,44 +238,27 @@ export const generatePayroll = async (month, year) => {
             );
 
 
-            // --------------------------------
             // COMPANY TOTALS
-            // --------------------------------
 
             totalGrossSalary += payslipGross;
-
-            totalDeductions +=
-                employeeTotalDeductions;
-
+            totalDeductions += employeeTotalDeductions;
             totalNetSalary += netSalary;
         }
 
 
-        // --------------------------------
         // UPDATE PAYROLL
-        // --------------------------------
 
-        payroll.totalGrossSalary =
-            roundMoney(totalGrossSalary);
-
-        payroll.totalDeductions =
-            roundMoney(totalDeductions);
-
-        payroll.totalNetSalary =
-            roundMoney(totalNetSalary);
-
+        payroll.totalGrossSalary = roundMoney(totalGrossSalary);
+        payroll.totalDeductions = roundMoney(totalDeductions);
+        payroll.totalNetSalary = roundMoney(totalNetSalary);
         payroll.status = "PROCESSED";
-
         payroll.processedAt = new Date();
 
         await payroll.save({
             session
         });
 
-
-        // --------------------------------
         // COMMIT
-        // --------------------------------
 
         await session.commitTransaction();
 

@@ -36,7 +36,6 @@ export const createPayslipValidation = [
         .withMessage("Deductions must be a valid positive number"),
 ];
 
-
 export const updatePayslipValidation = [
     param("id")
         .isMongoId()

@@ -316,8 +316,7 @@ export const assignShiftForMonth = async (assignmentData) => {
 
         date.setHours(0, 0, 0, 0);
 
-        const existing =
-            await ShiftAssignment.findOne({
+        const existing = await ShiftAssignment.findOne({
                 employeeId,
                 date
             });

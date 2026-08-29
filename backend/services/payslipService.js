@@ -7,10 +7,6 @@ import AppError from "../utils/AppError.js";
 export const createPayslip = async (payslipData) => {
     const {employeeId, month, year, grossSalary, allowances, deductions} = payslipData
 
-    if (!employeeId || !month || !year || !grossSalary) {
-        throw new AppError("Missing required fields", 400);
-    }
-
     const employee = await Employee.findById(employeeId);
 
     if (!employee) {
@@ -34,10 +30,7 @@ export const createPayslip = async (payslipData) => {
     });
 
     if (existingPayslip) {
-        throw new AppError(
-            "Payslip already exists for this employee and month",
-            409
-        );
+        throw new AppError("Payslip already exists for this employee and month", 409);
     }
 
     const payslip = await Payslip.create({

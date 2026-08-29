@@ -31,3 +31,24 @@ export const updateUserLeave = asyncHandler(async (req, res) => {
 
     return res.status(200).json(result);
 });
+
+
+export const editUserLeave = asyncHandler(async (req, res) => {
+    const result = await leaveService.editLeave(
+        req.session.userId,
+        req.params.id,
+        req.body
+    );
+
+    return res.status(200).json(result);
+});
+
+
+export const deleteUserLeave = asyncHandler(async (req, res) => {
+    const result = await leaveService.deleteLeave(
+        req.session.userId,
+        req.params.id
+    );
+
+    return res.status(200).json(result);
+});

@@ -7,7 +7,9 @@ import router from "./routes/api.js";
 import { globalLimiter } from "./middlewares/rateLimiter.js";
 import { errorMiddleware } from "./middlewares/errorMiddleware.js";
 
+
 const app = express();
+
 
 // Global Middlewares
 app.use(helmet());
@@ -31,10 +33,13 @@ app.use(globalLimiter);
 // WEB CACHE
 app.set("etag", false);
 
+
 // API Routes
 app.use("/api", router);
 
+
 // Error Middleware
 app.use(errorMiddleware);
+
 
 export default app;

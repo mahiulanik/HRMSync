@@ -3,8 +3,6 @@ import upload from "../config/multer.js";
 const router = express.Router()
 
 
-
-
 // Controllers
 import * as employeeController from "../controllers/employeeController.js"
 import * as authController from "../controllers/authController.js"
@@ -19,7 +17,7 @@ import * as payrollController from "../controllers/payrollController.js";
 import * as publicHolidayController from "../controllers/publicHolidayController.js";
 import { createEmployeeValidation, updateEmployeeValidation, employeeIdValidation } from "../validators/employeeValidator.js";
 import { loginValidation, changePasswordValidation, forgotPasswordValidation, verifyResetOTPValidation, resetPasswordValidation } from "../validators/authValidator.js";
-import { createLeaveValidation, getLeavesValidation, updateLeaveValidation } from "../validators/leaveValidator.js";
+import { createLeaveValidation, getLeavesValidation, updateLeaveValidation, editLeaveValidation, deleteLeaveValidation } from "../validators/leaveValidator.js";
 import { generatePayrollValidation, companyPayrollValidation, departmentPayrollValidation, employeePayrollValidation } from "../validators/payrollValidator.js";
 import { updateProfileValidation } from "../validators/profileValidator.js";
 import {attendanceQueryValidation, adminAttendanceQueryValidation} from "../validators/attendanceValidator.js";
@@ -32,6 +30,7 @@ import { authMiddleware, requiredAdmin } from "../middlewares/authMiddleware.js"
 import { authLimiter } from "../middlewares/rateLimiter.js";
 import asyncHandler from "../middlewares/asyncHandler.js";
 import validate from "../middlewares/validate.js";
+
 
 // Employee Routes
 router.post("/register", authMiddleware, requiredAdmin, createEmployeeValidation, validate, employeeController.createEmp)
@@ -68,6 +67,8 @@ router.get("/admin/attendance", authMiddleware, requiredAdmin, adminAttendanceQu
 router.post("/create-leave", authMiddleware, createLeaveValidation, validate, leaveController.createUserLeave)
 router.get("/get-leaves", authMiddleware, getLeavesValidation, validate, leaveController.getUserLeaves)
 router.patch("/update-leave/:id", authMiddleware, requiredAdmin, updateLeaveValidation, validate, leaveController.updateUserLeave)
+router.put("/edit-leave/:id", authMiddleware, editLeaveValidation, validate, leaveController.editUserLeave)
+router.delete("/delete-leave/:id", authMiddleware, deleteLeaveValidation, validate, leaveController.deleteUserLeave)
 
 
 // Payslip Routes

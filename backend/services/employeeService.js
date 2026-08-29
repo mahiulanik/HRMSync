@@ -11,7 +11,6 @@ export const createEmployee = async (data) => {
   const normalizedEmail = email.trim().toLowerCase();
   const normalizedMobile = mobile?.trim() || "";
 
-  // Check duplicate email
   const existingUser = await User.findOne({email: normalizedEmail,});
 
   if (existingUser) {
@@ -24,10 +23,8 @@ export const createEmployee = async (data) => {
   try {
     session.startTransaction();
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create User
     const user = new User({
       email: normalizedEmail,
       password: hashedPassword,
@@ -77,6 +74,7 @@ export const createEmployee = async (data) => {
 
 
 export const getEmployees = async (department, showDeleted, onlyDeleted, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc', search = '') => {
+
   const where = {};
 
   if (onlyDeleted) {
@@ -184,7 +182,6 @@ export const updateEmployee = async (id, data) => {
   try {
     session.startTransaction();
 
-    // Update Employee
     const updatedEmployee = await Employee.findOneAndUpdate(
       {
         _id: id,
@@ -214,7 +211,6 @@ export const updateEmployee = async (id, data) => {
       },
     );
 
-    // Employee not found
     if (!updatedEmployee) {
       throw new AppError("Employee Not Found", 404);
     }
@@ -223,6 +219,7 @@ export const updateEmployee = async (id, data) => {
     const userUpdate = {
       email: normalizedEmail,
     };
+
     if (role) {
       userUpdate.role = role;
     }
@@ -230,7 +227,6 @@ export const updateEmployee = async (id, data) => {
       userUpdate.password = await bcrypt.hash(password, 10);
     }
 
-    // Update User
     await User.findByIdAndUpdate(
       updatedEmployee.userId, 
       userUpdate,

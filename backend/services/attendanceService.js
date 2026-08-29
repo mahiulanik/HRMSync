@@ -12,16 +12,13 @@ export const clockInOut = async (session) => {
     const employee = await Employee.findOne({
         userId: session.userId,
     });
-
+    
     if (!employee) {
         throw new AppError("Employee not found", 404);
     }
 
     if (employee.isDeleted) {
-        throw new AppError(
-            "Your account is deactivated, you cannot clock in/out",
-            403
-        );
+        throw new AppError("Your account is deactivated, you cannot clock in/out", 403);
     }
 
     const now = new Date();
@@ -63,23 +60,14 @@ export const clockInOut = async (session) => {
     if (existing) {
 
         if (!existing.checkOut) {
-
             existing.checkOut = now;
 
-            const checkInTime =
-                new Date(existing.checkIn).getTime();
-
-            const diffMs =
-                now.getTime() - checkInTime;
-
-            const diffHours =
-                diffMs / (1000 * 60 * 60);
-
-            const workingHours =
-                parseFloat(diffHours.toFixed(2));
+            const checkInTime = new Date(existing.checkIn).getTime();
+            const diffMs = now.getTime() - checkInTime;
+            const diffHours = diffMs / (1000 * 60 * 60);
+            const workingHours = parseFloat(diffHours.toFixed(2));
 
             let dayType = "Half Day";
-
             if (workingHours >= 8) {
                 dayType = "Full Day";
             }
@@ -87,23 +75,12 @@ export const clockInOut = async (session) => {
             let overtimeMinutes = 0;
 
             if (shift) {
-                const [endHour, endMinute] =
-                    shift.endTime.split(":").map(Number);
-
+                const [endHour, endMinute] =  shift.endTime.split(":").map(Number);
                 const shiftEnd = new Date(now);
-
-                shiftEnd.setHours(
-                    endHour,
-                    endMinute,
-                    0,
-                    0
-                );
+                shiftEnd.setHours(endHour, endMinute, 0, 0);
 
                 if (now > shiftEnd) {
-                    overtimeMinutes = Math.floor(
-                        (now.getTime() - shiftEnd.getTime()) /
-                        (1000 * 60)
-                    );
+                    overtimeMinutes = Math.floor((now.getTime() - shiftEnd.getTime()) / (1000 * 60));
                 }
             }
 
@@ -128,45 +105,31 @@ export const clockInOut = async (session) => {
     }
 
     // CHECK IN
-let status = "PRESENT";
-let lateMinutes = 0;
+    let status = "PRESENT";
+    let lateMinutes = 0;
 
-// Company weekend: Friday (5) & Saturday (6)
-const isWeekend = now.getDay() === 5 || now.getDay() === 6;
+    // Company weekend: Friday (5) & Saturday (6)
+    const isWeekend = now.getDay() === 5 || now.getDay() === 6;
 
-if (isWeekend) {
-    status = "WEEKEND";
-} else if (shift) {
+    if (isWeekend) {
+        status = "WEEKEND";
+    } else if (shift) {
 
-    const [startHour, startMinute] =
-        shift.startTime.split(":").map(Number);
+    const [startHour, startMinute] = shift.startTime.split(":").map(Number);
 
     const shiftStart = new Date(now);
 
-    shiftStart.setHours(
-        startHour,
-        startMinute,
-        0,
-        0
-    );
+    shiftStart.setHours(startHour, startMinute, 0, 0);
 
-    const graceEnd = new Date(
-        shiftStart.getTime() +
-        shift.graceMinutes * 60 * 1000
-    );
+    const graceEnd = new Date(shiftStart.getTime() + shift.graceMinutes * 60 * 1000);
 
     if (now > graceEnd) {
         status = "LATE";
 
-        lateMinutes = Math.floor(
-            (now.getTime() - graceEnd.getTime()) /
-            (1000 * 60)
-        );
+        lateMinutes = Math.floor((now.getTime() - graceEnd.getTime()) / (1000 * 60));
     }
 }
-
     try {
-
         existing = await Attendance.create({
             employeeId: employee._id,
             shiftId: shift?._id || null,
@@ -181,7 +144,6 @@ if (isWeekend) {
 
         // Concurrent clock-in
         if (err.code === 11000) {
-
             existing = await Attendance.findOne({
                 employeeId: employee._id,
                 date: {
@@ -194,20 +156,12 @@ if (isWeekend) {
 
                 existing.checkOut = now;
 
-                const checkInTime =
-                    new Date(existing.checkIn).getTime();
-
-                const diffMs =
-                    now.getTime() - checkInTime;
-
-                const diffHours =
-                    diffMs / (1000 * 60 * 60);
-
-                const workingHours =
-                    parseFloat(diffHours.toFixed(2));
+                const checkInTime = new Date(existing.checkIn).getTime();
+                const diffMs = now.getTime() - checkInTime;
+                const diffHours = diffMs / (1000 * 60 * 60);
+                const workingHours = parseFloat(diffHours.toFixed(2));
 
                 let dayType = "Half Day";
-
                 if (workingHours >= 8) {
                     dayType = "Full Day";
                 }
@@ -215,24 +169,12 @@ if (isWeekend) {
                 let overtimeMinutes = 0;
 
                 if (shift) {
-
-                    const [endHour, endMinute] =
-                        shift.endTime.split(":").map(Number);
-
+                    const [endHour, endMinute] = shift.endTime.split(":").map(Number);
                     const shiftEnd = new Date(now);
-
-                    shiftEnd.setHours(
-                        endHour,
-                        endMinute,
-                        0,
-                        0
-                    );
+                    shiftEnd.setHours(endHour, endMinute, 0, 0);
 
                     if (now > shiftEnd) {
-                        overtimeMinutes = Math.floor(
-                            (now.getTime() - shiftEnd.getTime()) /
-                            (1000 * 60)
-                        );
+                        overtimeMinutes = Math.floor((now.getTime() - shiftEnd.getTime()) / (1000 * 60));
                     }
                 }
 
@@ -256,13 +198,8 @@ if (isWeekend) {
                     data: existing,
                 };
             }
-
-            throw new AppError(
-                "Clock in failed, please try again",
-                500
-            );
+            throw new AppError("Clock in failed, please try again", 500);
         }
-
         throw err;
     }
 
@@ -375,30 +312,22 @@ while (current <= endDate) {
     const approvedLeave = leaveMap[dateKey];
     const holiday = holidayMap[dateKey];
 
-    // ==========================================
     // 1. HOLIDAY HAS HIGHEST PRIORITY
-    // ==========================================
+
     if (holiday) {
         result.push({
             ...(existing || {}),
             _id: existing?._id || `holiday-${employeeId}-${dateKey}`,
             employeeId,
             date: existing?.date || new Date(current),
-
-            // Holiday always wins
             status: "HOLIDAY",
-
-            // Keep original attendance information if exists
             checkIn: existing?.checkIn || null,
             checkOut: existing?.checkOut || null,
             workingHours: existing?.workingHours || 0,
-
             dayType: "Holiday",
             holidayName: holiday.name,
-
             lateMinutes: existing?.lateMinutes || 0,
             overtimeMinutes: existing?.overtimeMinutes || 0,
-
             isVirtual: !existing,
         });
 
@@ -406,9 +335,8 @@ while (current <= endDate) {
         continue;
     }
 
-    // ==========================================
     // 2. EXISTING ATTENDANCE
-    // ==========================================
+
     if (existing) {
         if (
             approvedLeave &&
@@ -416,10 +344,7 @@ while (current <= endDate) {
         ) {
             result.push({
                 ...existing,
-                status:
-                    approvedLeave.leaveType ||
-                    approvedLeave.leaveName ||
-                    approvedLeave.name
+                status: approvedLeave.leaveType || approvedLeave.leaveName || approvedLeave.name
             });
         } else {
             result.push(existing);
@@ -429,18 +354,14 @@ while (current <= endDate) {
         continue;
     }
 
-    // ==========================================
     // 3. WEEKEND
-    // ==========================================
+
     const shiftAssignment = shiftMap[dateKey];
 
     if (shiftAssignment && shiftAssignment.shiftId) {
         const shift = shiftAssignment.shiftId;
 
-        if (
-            shift.weekends &&
-            shift.weekends.includes(dayOfWeek)
-        ) {
+        if (shift.weekends && shift.weekends.includes(dayOfWeek)) {
             result.push({
                 _id: `weekend-${employeeId}-${dateKey}`,
                 employeeId,
@@ -455,17 +376,14 @@ while (current <= endDate) {
         }
     }
 
-    // ==========================================
     // 4. ABSENT / LEAVE
-    // ==========================================
+
     if (shiftAssignment && shiftAssignment.shiftId) {
         result.push({
             _id: `absent-${employeeId}-${dateKey}`,
             employeeId,
             date: new Date(current),
-            status: approvedLeave
-                ? approvedLeave.type
-                : "ABSENT",
+            status: approvedLeave ? approvedLeave.type : "ABSENT",
             checkIn: null,
             checkOut: null,
             workingHours: null,
@@ -503,16 +421,12 @@ export const getAttendance = async (session, query) => {
     const year = parseInt(query.year) || new Date().getFullYear();
 
     const startDate = new Date(year, month - 1, 1);
-
     let endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
-    if (
-        year === today.getFullYear() &&
-        month === today.getMonth() + 1
-    ) {
+    if (year === today.getFullYear() && month === today.getMonth() + 1) {
         endDate = today;
     }
 

@@ -9,8 +9,7 @@ const Badge = ({ text }) => {
   };
 
   const style =
-    statusStyles[text?.toUpperCase()] ||
-    "bg-gray-100 text-gray-700";
+    statusStyles[text?.toUpperCase()] || "bg-gray-100 text-gray-700";
 
   return (
     <span

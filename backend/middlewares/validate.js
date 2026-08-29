@@ -11,12 +11,10 @@ const validate = (req, res, next) => {
             "Validation failed",
             400
         );
-
         error.errors = errors.array();
 
         return next(error);
     }
-
     next();
 };
 

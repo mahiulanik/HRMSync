@@ -1,14 +1,9 @@
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyRefreshToken,
-} from "../config/token.js";
+import {generateAccessToken, generateRefreshToken, verifyRefreshToken} from "../config/token.js";
 import User from "../models/userModel.js";
 import Employee from "../models/employeeModel.js";
 import bcrypt from "bcrypt";
 import sendEmail from "../config/sendEmail.js"
 import crypto from "crypto"
-import validator from "validator"
 import AppError from "../utils/AppError.js";
 
 
@@ -37,24 +32,12 @@ export const loginUser = async (data) => {
             userId: user._id
         });
 
-        if (
-            employee &&
-            (
-                employee.isDeleted ||
-                employee.employeeStatus === "Inactive"
-            )
-        ) {
-            throw new AppError(
-                "Your account has been deactivated. Please contact administrator.",
-                403
-            );
+        if (employee && (employee.isDeleted || employee.employeeStatus === "Inactive")) {
+            throw new AppError("Your account has been deactivated. Please contact administrator.", 403);
         }
     }
 
-    const isValid = await bcrypt.compare(
-        password,
-        user.password
-    );
+    const isValid = await bcrypt.compare(password, user.password);
 
     if (!isValid) {
         throw new AppError("Invalid email or password", 401);
@@ -92,19 +75,13 @@ export const changePassword = async (userId, data) => {
         throw new AppError("User not found", 404);
     }
 
-    const isValid = await bcrypt.compare(
-        currentPassword,
-        user.password
-    );
+    const isValid = await bcrypt.compare(currentPassword, user.password);
 
     if (!isValid) {
         throw new AppError("Password incorrect", 401);
     }
 
-    const hashedPassword = await bcrypt.hash(
-        newPassword,
-        10
-    );
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     await User.findByIdAndUpdate(userId, {
         password: hashedPassword,
@@ -242,44 +219,26 @@ export const verifyPasswordResetOTP = async (email, otp) => {
     });
 
     if (!user) {
-        throw new AppError(
-            "No account found with this email",
-            404
-        );
+        throw new AppError("No account found with this email", 404);
     }
 
     if (!user.passwordResetOTP) {
-        throw new AppError(
-            "OTP not found or expired",
-            400
-        );
+        throw new AppError("OTP not found or expired", 400);
     }
 
-    if (
-        !user.passwordResetOTPExpires ||
-        user.passwordResetOTPExpires < new Date()
-    ) {
+    if (!user.passwordResetOTPExpires || user.passwordResetOTPExpires < new Date()) {
         user.passwordResetOTP = null;
         user.passwordResetOTPExpires = null;
 
         await user.save();
 
-        throw new AppError(
-            "OTP has expired",
-            400
-        );
+        throw new AppError("OTP has expired", 400);
     }
 
-    const isOTPValid = await bcrypt.compare(
-        otp,
-        user.passwordResetOTP
-    );
+    const isOTPValid = await bcrypt.compare(otp, user.passwordResetOTP);
 
     if (!isOTPValid) {
-        throw new AppError(
-            "Invalid OTP",
-            400
-        );
+        throw new AppError("Invalid OTP", 400);
     }
 
     return {
@@ -296,50 +255,29 @@ export const resetEmployeePassword = async (email, otp, newPassword) => {
     });
 
     if (!user) {
-        throw new AppError(
-            "No account found with this email",
-            404
-        );
+        throw new AppError("No account found with this email", 404);
     }
 
     if (!user.passwordResetOTP) {
-        throw new AppError(
-            "OTP not found or expired",
-            400
-        );
+        throw new AppError("OTP not found or expired", 400);
     }
 
-    if (
-        !user.passwordResetOTPExpires ||
-        user.passwordResetOTPExpires < new Date()
-    ) {
+    if (!user.passwordResetOTPExpires || user.passwordResetOTPExpires < new Date()) {
         user.passwordResetOTP = null;
         user.passwordResetOTPExpires = null;
 
         await user.save();
 
-        throw new AppError(
-            "OTP has expired",
-            400
-        );
+        throw new AppError("OTP has expired", 400);
     }
 
-    const isOTPValid = await bcrypt.compare(
-        otp,
-        user.passwordResetOTP
-    );
+    const isOTPValid = await bcrypt.compare(otp, user.passwordResetOTP);
 
     if (!isOTPValid) {
-        throw new AppError(
-            "Invalid OTP",
-            400
-        );
+        throw new AppError("Invalid OTP", 400);
     }
 
-    const hashedPassword = await bcrypt.hash(
-        newPassword,
-        10
-    );
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     user.password = hashedPassword;
 

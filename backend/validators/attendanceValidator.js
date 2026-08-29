@@ -1,5 +1,6 @@
 import { query } from "express-validator";
 
+
 export const attendanceQueryValidation = [
     query("month")
         .optional()

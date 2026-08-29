@@ -1,27 +1,35 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import api from '../api/axios';
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import api from "../api/axios";
 import { getApiError } from "../utils/apiError.js";
-import { ArrowLeft, Eye, EyeOff, Mail, KeyRound, Lock, RotateCcw } from 'lucide-react';
+import {
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  Mail,
+  KeyRound,
+  Lock,
+  RotateCcw,
+} from "lucide-react";
 
 export default function LoginPage({ role }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotStep, setForgotStep] = useState(1);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [newPassword, setNewPassword] = useState('');
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [forgotMsg, setForgotMsg] = useState('');
-  const [forgotError, setForgotError] = useState('');
+  const [forgotMsg, setForgotMsg] = useState("");
+  const [forgotError, setForgotError] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [timer, setTimer] = useState(300);
   const [canResend, setCanResend] = useState(false);
@@ -35,13 +43,15 @@ export default function LoginPage({ role }) {
       otpRefs.current = otpRefs.current.slice(0, 6);
       setTimeout(() => otpRefs.current[0]?.focus(), 100);
     }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [forgotStep]);
 
   useEffect(() => {
     if (forgotStep === 2 && timer > 0) {
       timerRef.current = setInterval(() => {
-        setTimer(prev => {
+        setTimer((prev) => {
           if (prev <= 1) {
             clearInterval(timerRef.current);
             setCanResend(true);
@@ -54,7 +64,8 @@ export default function LoginPage({ role }) {
     }
   }, [forgotStep, timer === 300]);
 
-  const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+  const formatTime = (s) =>
+    `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
   const handleOtpChange = (index, value) => {
     if (!/^\d*$/.test(value)) return;
@@ -67,36 +78,37 @@ export default function LoginPage({ role }) {
   };
 
   const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
       otpRefs.current[index - 1]?.focus();
     }
   };
 
   const handleOtpPaste = (e) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const pasted = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
     if (pasted) {
-      const newOtp = pasted.split('').concat(Array(6 - pasted.length).fill(''));
+      const newOtp = pasted.split("").concat(Array(6 - pasted.length).fill(""));
       setOtp(newOtp);
       otpRefs.current[Math.min(pasted.length, 5)]?.focus();
     }
   };
 
   const handleResendOTP = async () => {
-    setForgotError('');
-    setForgotMsg('');
+    setForgotError("");
+    setForgotMsg("");
     setForgotLoading(true);
     try {
-      await api.post('/forgot-password', { email: forgotEmail });
-      setForgotMsg('OTP resent to your email');
+      await api.post("/forgot-password", { email: forgotEmail });
+      setForgotMsg("OTP resent to your email");
       setTimer(300);
       setCanResend(false);
-      setOtp(['', '', '', '', '', '']);
+      setOtp(["", "", "", "", "", ""]);
       otpRefs.current[0]?.focus();
     } catch (err) {
-    setForgotError(
-        getApiError(err, "Failed to resend OTP")
-    );
+      setForgotError(getApiError(err, "Failed to resend OTP"));
     } finally {
       setForgotLoading(false);
     }
@@ -104,15 +116,15 @@ export default function LoginPage({ role }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
     try {
       const user = await login(email, password, role);
-      navigate(user.role === 'ADMIN' ? '/admin/dashboard' : '/employee/dashboard');
+      navigate(
+        user.role === "ADMIN" ? "/admin/dashboard" : "/employee/dashboard",
+      );
     } catch (err) {
-    setError(
-        getApiError(err, "Login failed")
-    );
+      setError(getApiError(err, "Login failed"));
     } finally {
       setLoading(false);
     }
@@ -120,17 +132,15 @@ export default function LoginPage({ role }) {
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
-    setForgotError('');
-    setForgotMsg('');
+    setForgotError("");
+    setForgotMsg("");
     setForgotLoading(true);
     try {
-      await api.post('/forgot-password', { email: forgotEmail });
-      setForgotMsg('OTP sent to your email');
+      await api.post("/forgot-password", { email: forgotEmail });
+      setForgotMsg("OTP sent to your email");
       setForgotStep(2);
     } catch (err) {
-    setForgotError(
-        getApiError(err, "Failed to send OTP")
-    );
+      setForgotError(getApiError(err, "Failed to send OTP"));
     } finally {
       setForgotLoading(false);
     }
@@ -138,22 +148,20 @@ export default function LoginPage({ role }) {
 
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
-    const otpStr = otp.join('');
+    const otpStr = otp.join("");
     if (otpStr.length !== 6) {
-      setForgotError('Please enter all 6 digits');
+      setForgotError("Please enter all 6 digits");
       return;
     }
-    setForgotError('');
-    setForgotMsg('');
+    setForgotError("");
+    setForgotMsg("");
     setForgotLoading(true);
     try {
-      await api.post('/verify-reset-otp', { email: forgotEmail, otp: otpStr });
-      setForgotMsg('OTP verified successfully');
+      await api.post("/verify-reset-otp", { email: forgotEmail, otp: otpStr });
+      setForgotMsg("OTP verified successfully");
       setForgotStep(3);
     } catch (err) {
-    setForgotError(
-        getApiError(err, "Invalid OTP")
-    );
+      setForgotError(getApiError(err, "Invalid OTP"));
     } finally {
       setForgotLoading(false);
     }
@@ -161,25 +169,27 @@ export default function LoginPage({ role }) {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    setForgotError('');
-    setForgotMsg('');
+    setForgotError("");
+    setForgotMsg("");
     setForgotLoading(true);
     try {
-      await api.post('/reset-password', { email: forgotEmail, otp: otp.join(''), newPassword });
-      setForgotMsg('Password reset successfully! You can now login.');
+      await api.post("/reset-password", {
+        email: forgotEmail,
+        otp: otp.join(""),
+        newPassword,
+      });
+      setForgotMsg("Password reset successfully! You can now login.");
       setTimeout(() => {
         setForgotMode(false);
         setForgotStep(1);
-        setForgotEmail('');
-        setOtp(['', '', '', '', '', '']);
-        setNewPassword('');
-        setForgotMsg('');
-        setPassword('');
+        setForgotEmail("");
+        setOtp(["", "", "", "", "", ""]);
+        setNewPassword("");
+        setForgotMsg("");
+        setPassword("");
       }, 2000);
     } catch (err) {
-    setForgotError(
-        getApiError(err, "Failed to reset password")
-    );
+      setForgotError(getApiError(err, "Failed to reset password"));
     } finally {
       setForgotLoading(false);
     }
@@ -188,14 +198,14 @@ export default function LoginPage({ role }) {
   const resetForgot = () => {
     setForgotMode(false);
     setForgotStep(1);
-    setForgotError('');
-    setForgotMsg('');
-    setForgotEmail('');
-    setOtp(['', '', '', '', '', '']);
-    setNewPassword('');
+    setForgotError("");
+    setForgotMsg("");
+    setForgotEmail("");
+    setOtp(["", "", "", "", "", ""]);
+    setNewPassword("");
   };
 
-  const isAdmin = role === 'admin';
+  const isAdmin = role === "admin";
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
@@ -204,25 +214,41 @@ export default function LoginPage({ role }) {
           HRMSync
         </h1>
         <p className="text-gray-400 text-base leading-relaxed max-w-md">
-          Streamline your workforce operations, track attendance, manage payroll, and empower your team securely.
+          Streamline your workforce operations, track attendance, manage
+          payroll, and empower your team securely.
         </p>
       </div>
       <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center px-8 sm:px-16 py-12 lg:py-0">
-        <button onClick={() => navigate('/')} className="flex items-center gap-2 text-text-secondary hover:text-text-primary mb-8 text-sm">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-text-secondary hover:text-text-primary mb-8 text-sm"
+        >
           <ArrowLeft size={16} />
           Back to portals
         </button>
 
         {!forgotMode ? (
           <>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-1">{isAdmin ? 'Admin Portal' : 'Employee Portal'}</h2>
-            <p className="text-text-secondary mb-8">{isAdmin ? 'Sign in to manage the organization' : 'Sign in to access your account'}</p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-1">
+              {isAdmin ? "Admin Portal" : "Employee Portal"}
+            </h2>
+            <p className="text-text-secondary mb-8">
+              {isAdmin
+                ? "Sign in to manage the organization"
+                : "Sign in to access your account"}
+            </p>
 
-            {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>}
+            {error && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
+                {error}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1.5">Email address</label>
+                <label className="block text-sm font-medium mb-1.5">
+                  Email address
+                </label>
                 <input
                   type="email"
                   value={email}
@@ -233,16 +259,22 @@ export default function LoginPage({ role }) {
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium mb-1.5">Password</label>
+                <label className="block text-sm font-medium mb-1.5">
+                  Password
+                </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-primary pr-12"
                     required
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
@@ -253,12 +285,16 @@ export default function LoginPage({ role }) {
                 disabled={loading}
                 className="w-full bg-primary hover:bg-primary-hover text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
               >
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading ? "Signing in..." : "Sign in"}
               </button>
             </form>
 
             <button
-              onClick={() => { setForgotMode(true); setForgotError(''); setForgotMsg(''); }}
+              onClick={() => {
+                setForgotMode(true);
+                setForgotError("");
+                setForgotMsg("");
+              }}
               className="mt-5 flex items-center justify-center gap-2 w-full py-2.5 px-4 text-sm font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 hover:border-primary/50 transition-all duration-200"
             >
               <KeyRound size={15} />
@@ -268,25 +304,38 @@ export default function LoginPage({ role }) {
         ) : (
           <>
             <h2 className="text-2xl sm:text-3xl font-bold mb-1">
-              {forgotStep === 1 && 'Reset Password'}
-              {forgotStep === 2 && 'Verify OTP'}
-              {forgotStep === 3 && 'New Password'}
+              {forgotStep === 1 && "Reset Password"}
+              {forgotStep === 2 && "Verify OTP"}
+              {forgotStep === 3 && "New Password"}
             </h2>
             <p className="text-text-secondary mb-8">
-              {forgotStep === 1 && 'Enter your email to receive a reset OTP'}
-              {forgotStep === 2 && 'Enter the 6-digit code sent to your email'}
-              {forgotStep === 3 && 'Create a new password for your account'}
+              {forgotStep === 1 && "Enter your email to receive a reset OTP"}
+              {forgotStep === 2 && "Enter the 6-digit code sent to your email"}
+              {forgotStep === 3 && "Create a new password for your account"}
             </p>
 
-            {forgotError && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{forgotError}</div>}
-            {forgotMsg && <div className="bg-green-50 text-green-600 p-3 rounded-lg mb-4 text-sm">{forgotMsg}</div>}
+            {forgotError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
+                {forgotError}
+              </div>
+            )}
+            {forgotMsg && (
+              <div className="bg-green-50 text-green-600 p-3 rounded-lg mb-4 text-sm">
+                {forgotMsg}
+              </div>
+            )}
 
             {forgotStep === 1 && (
               <form onSubmit={handleSendOTP}>
                 <div className="mb-6">
-                  <label className="block text-sm font-medium mb-1.5">Email address</label>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Email address
+                  </label>
                   <div className="relative">
-                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Mail
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
                     <input
                       type="email"
                       value={forgotEmail}
@@ -301,7 +350,7 @@ export default function LoginPage({ role }) {
                   disabled={forgotLoading}
                   className="w-full bg-primary hover:bg-primary-hover text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {forgotLoading ? 'Sending...' : 'Send OTP'}
+                  {forgotLoading ? "Sending..." : "Send OTP"}
                 </button>
               </form>
             )}
@@ -309,12 +358,14 @@ export default function LoginPage({ role }) {
             {forgotStep === 2 && (
               <form onSubmit={handleVerifyOTP}>
                 <div className="mb-6">
-                  <label className="block text-sm font-medium mb-3 text-center">One-Time Password</label>
+                  <label className="block text-sm font-medium mb-3 text-center">
+                    One-Time Password
+                  </label>
                   <div className="flex justify-center gap-2 sm:gap-3 mb-4">
                     {otp.map((digit, i) => (
                       <input
                         key={i}
-                        ref={el => otpRefs.current[i] = el}
+                        ref={(el) => (otpRefs.current[i] = el)}
                         type="text"
                         inputMode="numeric"
                         maxLength={1}
@@ -330,10 +381,15 @@ export default function LoginPage({ role }) {
                   <div className="text-center mb-4">
                     {timer > 0 ? (
                       <p className="text-sm text-text-secondary">
-                        Code expires in <span className="font-semibold text-primary">{formatTime(timer)}</span>
+                        Code expires in{" "}
+                        <span className="font-semibold text-primary">
+                          {formatTime(timer)}
+                        </span>
                       </p>
                     ) : (
-                      <p className="text-sm text-red-500 font-medium">Code expired</p>
+                      <p className="text-sm text-red-500 font-medium">
+                        Code expired
+                      </p>
                     )}
                   </div>
 
@@ -344,17 +400,20 @@ export default function LoginPage({ role }) {
                       disabled={!canResend || forgotLoading}
                       className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary-hover disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                     >
-                      <RotateCcw size={14} className={forgotLoading ? 'animate-spin' : ''} />
+                      <RotateCcw
+                        size={14}
+                        className={forgotLoading ? "animate-spin" : ""}
+                      />
                       Resend OTP
                     </button>
                   </div>
                 </div>
                 <button
                   type="submit"
-                  disabled={forgotLoading || otp.join('').length !== 6}
+                  disabled={forgotLoading || otp.join("").length !== 6}
                   className="w-full bg-primary hover:bg-primary-hover text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {forgotLoading ? 'Verifying...' : 'Verify OTP'}
+                  {forgotLoading ? "Verifying..." : "Verify OTP"}
                 </button>
               </form>
             )}
@@ -362,11 +421,16 @@ export default function LoginPage({ role }) {
             {forgotStep === 3 && (
               <form onSubmit={handleResetPassword}>
                 <div className="mb-6">
-                  <label className="block text-sm font-medium mb-1.5">New Password</label>
+                  <label className="block text-sm font-medium mb-1.5">
+                    New Password
+                  </label>
                   <div className="relative">
-                    <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Lock
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
                     <input
-                      type={showNewPassword ? 'text' : 'password'}
+                      type={showNewPassword ? "text" : "password"}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Minimum 8 characters"
@@ -374,8 +438,16 @@ export default function LoginPage({ role }) {
                       className="w-full pl-10 pr-12 py-3 border border-border rounded-lg focus:outline-none focus:border-primary"
                       required
                     />
-                    <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                      {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    >
+                      {showNewPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -384,12 +456,15 @@ export default function LoginPage({ role }) {
                   disabled={forgotLoading}
                   className="w-full bg-primary hover:bg-primary-hover text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {forgotLoading ? 'Resetting...' : 'Reset Password'}
+                  {forgotLoading ? "Resetting..." : "Reset Password"}
                 </button>
               </form>
             )}
 
-            <button onClick={resetForgot} className="mt-5 flex items-center justify-center gap-2 w-full py-2.5 px-4 text-sm font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 hover:border-primary/50 transition-all duration-200">
+            <button
+              onClick={resetForgot}
+              className="mt-5 flex items-center justify-center gap-2 w-full py-2.5 px-4 text-sm font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 hover:border-primary/50 transition-all duration-200"
+            >
               <ArrowLeft size={15} />
               Back to login
             </button>

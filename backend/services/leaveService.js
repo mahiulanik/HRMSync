@@ -17,16 +17,8 @@ export const createLeave = async (userId, leaveData) => {
 
     const {type, startDate, endDate, reason} = leaveData;
 
-    if (!type || !startDate || !endDate || !reason) {
-        throw new AppError("Missing required fields", 400);
-    }
-
     const start = new Date(startDate);
     const end = new Date(endDate);
-
-    if (end < start) {
-        throw new AppError("End date cannot be before start date", 400);
-    }
 
     const leave = await Leave.create({
         employeeId: employee._id,
@@ -117,5 +109,78 @@ export const updateLeave = async (id, leaveData) => {
     return {
         success: true,
         data: leave
+    };
+};
+
+
+export const editLeave = async (userId, id, leaveData) => {
+    const employee = await Employee.findOne({ userId });
+
+    if (!employee) {
+        throw new AppError("Employee not found", 404);
+    }
+
+    const leave = await Leave.findById(id);
+
+    if (!leave) {
+        throw new AppError("Leave not found", 404);
+    }
+
+    if (leave.employeeId.toString() !== employee._id.toString()) {
+        throw new AppError("You can only edit your own leave requests", 403);
+    }
+
+    if (leave.status !== "PENDING") {
+        throw new AppError("You can only edit pending leave requests", 400);
+    }
+
+    const { type, startDate, endDate, reason } = leaveData;
+
+    if (!type || !startDate || !endDate || !reason) {
+        throw new AppError("Missing required fields", 400);
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (end < start) {
+        throw new AppError("End date cannot be before start date", 400);
+    }
+
+    const updated = await Leave.findByIdAndUpdate(
+        id,
+        { type, startDate: start, endDate: end, reason },
+        { returnDocument: "after" }
+    );
+
+    return {
+        success: true,
+        data: updated
+    };
+};
+
+
+export const deleteLeave = async (userId, id) => {
+    const employee = await Employee.findOne({ userId });
+
+    if (!employee) {
+        throw new AppError("Employee not found", 404);
+    }
+
+    const leave = await Leave.findById(id);
+
+    if (!leave) {
+        throw new AppError("Leave not found", 404);
+    }
+
+    if (leave.employeeId.toString() !== employee._id.toString()) {
+        throw new AppError("You can only delete your own leave requests", 403);
+    }
+
+    await Leave.findByIdAndDelete(id);
+
+    return {
+        success: true,
+        message: "Leave deleted successfully"
     };
 };

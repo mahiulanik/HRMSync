@@ -5,7 +5,6 @@ import Leave from "../models/leaveModel.js"
 import Payslip from "../models/payslipModel.js"
 import Payroll from "../models/payrollModel.js"
 import PublicHoliday from "../models/publicHolidayModel.js"
-import Shift from "../models/shiftModel.js"
 import ShiftAssignment from "../models/shiftAssignmentModel.js"
 
 // Company weekend: Friday (5) & Saturday (6)
@@ -97,6 +96,7 @@ export const getDashboard = async (session) => {
                     $count: "count"
                 }
             ]),
+            
 
             Attendance.aggregate([
                 {
@@ -166,7 +166,7 @@ export const getDashboard = async (session) => {
                 const deptAttendance = await Attendance.aggregate([
                     {
                         $match: {
-                            date: { $gte: startOfMonth, $lte: endOfMonth }
+                            date:  { $gte: startOfToday, $lt: endOfToday }
                         }
                     },
                     {
@@ -211,12 +211,14 @@ export const getDashboard = async (session) => {
 
                 return DEPARTMENTS.filter(dept => empCounts[dept]).map(dept => {
                     const attendance = deptMap[dept] || { present: 0, late: 0, absent: 0, total: 0 };
-                    const totalRecords = attendance.present + attendance.late + attendance.absent;
-                    const rate = totalRecords > 0 ? Math.round(((attendance.present + attendance.late) / totalRecords) * 100) : 0;
+                    const deptEmployeeCount = empCounts[dept] || 1;
+                    const totalPresentLate = attendance.present + attendance.late;
+                    const rate = deptEmployeeCount > 0 ? Math.round((totalPresentLate / deptEmployeeCount) * 100) : 0;
+
                     return {
                         department: dept,
-                        totalEmployees: empCounts[dept] || 0,
-                        attendanceRate: rate,
+                        totalEmployees: deptEmployeeCount,
+                        attendanceRate: Math.min(rate, 100),
                         present: attendance.present,
                         late: attendance.late,
                         absent: attendance.absent
@@ -260,9 +262,7 @@ export const getDashboard = async (session) => {
                 .lean()
         ]);
 
-        // --- Inferred absence: employees don't get an ABSENT attendance record when
-        // they don't check in, so we derive it as (expected - present - late - onLeave),
-        // skipping weekends (Fri/Sat) and public holidays. ---
+
         const [
             employeesForAbsence,
             leavesInRange,
@@ -411,26 +411,20 @@ export const getDashboard = async (session) => {
     }
 
     const employee = await Employee.findOne({
-    userId: session.userId
-}).lean();
+        userId: session.userId
+    }).lean();
 
-if (!employee) {
-    throw new AppError("Employee not found", 404);
-}
+    if (!employee) {
+        throw new AppError("Employee not found", 404);
+    }
 
-// ------------------------------------------------------------
 // Date helper
-// ------------------------------------------------------------
 
 const getDateKey = (date) => {
     const d = new Date(date);
 
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
-
-// ------------------------------------------------------------
-// Today
-// ------------------------------------------------------------
 
 const today = new Date();
 
@@ -441,53 +435,19 @@ const endOfToday = new Date(today);
 endOfToday.setHours(24, 0, 0, 0);
 
 // Company weekend: Friday + Saturday
-const isTodayWeekend =
-    today.getDay() === 5 ||
-    today.getDay() === 6;
+const isTodayWeekend = today.getDay() === 5 || today.getDay() === 6;
 
-// ------------------------------------------------------------
 // Current month
-// ------------------------------------------------------------
 
-const startOfMonth = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    1
-);
+const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
 
-const endOfMonth = new Date(
-    today.getFullYear(),
-    today.getMonth() + 1,
-    0,
-    23,
-    59,
-    59,
-    999
-);
-
-// ------------------------------------------------------------
 // Current year
-// ------------------------------------------------------------
 
-const startOfYear = new Date(
-    today.getFullYear(),
-    0,
-    1
-);
+const startOfYear = new Date(today.getFullYear(), 0, 1);
+const endOfYear = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
 
-const endOfYear = new Date(
-    today.getFullYear(),
-    11,
-    31,
-    23,
-    59,
-    59,
-    999
-);
-
-// ------------------------------------------------------------
 // Fetch dashboard data
-// ------------------------------------------------------------
 
 const [
     todayAttendance,
@@ -608,21 +568,19 @@ const [
         .lean(),
 
     // Next public holiday
-    // Next public holiday
-PublicHoliday.findOne({
-    endDate: {
-        $gte: startOfToday
-    }
-})
-    .sort({
-        startDate: 1
-    })
-    .lean()
-]);
 
-// ------------------------------------------------------------
+    PublicHoliday.findOne({
+        endDate: {
+            $gte: startOfToday
+        }
+    })
+        .sort({
+            startDate: 1
+        })
+        .lean()
+    ]);
+
 // Attendance map
-// ------------------------------------------------------------
 
 const attendanceMap = new Map();
 
@@ -630,23 +588,14 @@ for (const record of monthAttendanceRecords) {
     const dateKey = getDateKey(record.date);
 
     attendanceMap.set(dateKey, {
-        status: String(
-            record.status || ""
-        ).toUpperCase(),
-
+        status: String(record.status || "").toUpperCase(),
         date: record.date,
-
-        checkIn:
-            record.checkIn || null,
-
-        checkOut:
-            record.checkOut || null
+        checkIn: record.checkIn || null,
+        checkOut: record.checkOut || null
     });
 }
 
-// ------------------------------------------------------------
 // Public holidays
-// ------------------------------------------------------------
 
 const holidaysThisMonth =
     await PublicHoliday.find({
@@ -668,11 +617,8 @@ const holidayInfoMap = new Map();
 
 for (const holiday of holidaysThisMonth) {
 
-    const holidayStart =
-        new Date(holiday.startDate);
-
-    const holidayEnd =
-        new Date(holiday.endDate);
+    const holidayStart = new Date(holiday.startDate);
+    const holidayEnd = new Date(holiday.endDate);
 
     for (
         let d = new Date(holidayStart);
@@ -691,40 +637,22 @@ for (const holiday of holidaysThisMonth) {
         holidayInfoMap.set(
             dateKey,
             {
-                name:
-                    holiday.name || "Holiday"
+                name: holiday.name || "Holiday"
             }
         );
     }
 }
 
-// ------------------------------------------------------------
 // Approved leave date map
-// ------------------------------------------------------------
 
 const leaveDateMap = new Map();
 
 for (const leave of monthLeaves) {
 
-    const leaveStart =
-        new Date(
-            leave.startDate
-        );
-
-    const leaveEnd =
-        new Date(
-            leave.endDate
-        );
-
-    const actualStart =
-        leaveStart < startOfMonth
-            ? new Date(startOfMonth)
-            : new Date(leaveStart);
-
-    const actualEnd =
-        leaveEnd > endOfMonth
-            ? new Date(endOfMonth)
-            : new Date(leaveEnd);
+    const leaveStart = new Date(leave.startDate);
+    const leaveEnd = new Date(leave.endDate);
+    const actualStart = leaveStart < startOfMonth ? new Date(startOfMonth) : new Date(leaveStart);
+    const actualEnd = leaveEnd > endOfMonth ? new Date(endOfMonth) : new Date(leaveEnd);
 
     for (
         let d = new Date(actualStart);
@@ -747,22 +675,11 @@ for (const leave of monthLeaves) {
     }
 }
 
-// ------------------------------------------------------------
 // Employee joining date
-// ------------------------------------------------------------
 
-const employeeJoinDate =
-    new Date(
-        employee.joiningDate ||
-        employee.createdAt
-    );
+const employeeJoinDate = new Date(employee.joiningDate || employee.createdAt);
 
-employeeJoinDate.setHours(
-    0,
-    0,
-    0,
-    0
-);
+employeeJoinDate.setHours(0, 0, 0, 0);
 
 // ------------------------------------------------------------
 // Attendance counters
@@ -787,61 +704,33 @@ let holidayDays = 0;
 let weekendDays = 0;
 let notJoinedDays = 0;
 
-// ------------------------------------------------------------
-// Calendar data
-// ------------------------------------------------------------
-
 const calendarData = [];
 
-// ------------------------------------------------------------
 // Only calculate elapsed days
-// ------------------------------------------------------------
 
-const calculationEnd =
-    new Date(today);
+const calculationEnd = new Date(today);
 
-calculationEnd.setHours(
-    0,
-    0,
-    0,
-    0
-);
+calculationEnd.setHours(0, 0, 0, 0);
 
-// ------------------------------------------------------------
-// Generate attendance calendar
-// ------------------------------------------------------------
-
-for (
-    let d = new Date(startOfMonth);
-    d <= calculationEnd;
-    d.setDate(
-        d.getDate() + 1
-    )
-) {
-
-    const currentDate =
-        new Date(d);
-
-    currentDate.setHours(
-        0,
-        0,
-        0,
-        0
-    );
-
-    const dateKey =
-        getDateKey(currentDate);
-
-    const dayOfWeek =
-        currentDate.getDay();
-
-    // --------------------------------------------------------
-    // Employee not joined yet
-    // --------------------------------------------------------
-
-    if (
-        currentDate < employeeJoinDate
+    for (
+        let d = new Date(startOfMonth);
+        d <= calculationEnd;
+        d.setDate(
+            d.getDate() + 1
+        )
     ) {
+
+    const currentDate = new Date(d);
+
+    currentDate.setHours(0, 0, 0, 0);
+
+    const dateKey = getDateKey(currentDate);
+
+    const dayOfWeek = currentDate.getDay();
+
+    // Employee not joined yet
+
+    if (currentDate < employeeJoinDate) {
         notJoinedDays++;
 
         calendarData.push({
@@ -852,16 +741,9 @@ for (
         continue;
     }
 
-
-    // --------------------------------------------------------
     // Public holiday
-    //
-    // HOLIDAY = PRESENT
-    // --------------------------------------------------------
 
-    if (
-        holidaySetMonth.has(
-            dateKey
+    if (holidaySetMonth.has(dateKey
         )
     ) {
 
@@ -879,20 +761,12 @@ for (
         continue;
     }
 
-
-        // --------------------------------------------------------
     // Weekend
     // Friday + Saturday
-    //
-    // WEEKEND = PRESENT
-    // --------------------------------------------------------
 
-    const isWeekend =
-        dayOfWeek === 5 ||
-        dayOfWeek === 6;
+    const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
 
     if (isWeekend) {
-
         weekendDays++;
 
         calendarData.push({
@@ -903,19 +777,11 @@ for (
         continue;
     }
 
-    // --------------------------------------------------------
-    // Approved leave
-    //
     // ON_LEAVE = PRESENT
-    // --------------------------------------------------------
 
-    const leaveInfo =
-        leaveDateMap.get(
-            dateKey
-        );
+    const leaveInfo = leaveDateMap.get(dateKey);
 
     if (leaveInfo) {
-
         leaveDays++;
 
         calendarData.push({
@@ -928,24 +794,9 @@ for (
         continue;
     }
 
-
-    // --------------------------------------------------------
-    // Find attendance record
-    // --------------------------------------------------------
-
-    const attendance =
-        attendanceMap.get(
-            dateKey
-        );
-
-    // --------------------------------------------------------
-    // No attendance record
-    //
-    // ONLY THIS = ABSENT
-    // --------------------------------------------------------
+    const attendance = attendanceMap.get(dateKey);
 
     if (!attendance) {
-
         absentDays++;
 
         calendarData.push({
@@ -956,15 +807,8 @@ for (
         continue;
     }
 
-    // --------------------------------------------------------
-    // PRESENT
-    // --------------------------------------------------------
 
-    if (
-        attendance.status ===
-        "PRESENT"
-    ) {
-
+    if (attendance.status === "PRESENT") {
         presentDays++;
 
         calendarData.push({
@@ -979,17 +823,7 @@ for (
         continue;
     }
 
-    // --------------------------------------------------------
-    // LATE
-    //
-    // LATE = PRESENT
-    // --------------------------------------------------------
-
-    if (
-        attendance.status ===
-        "LATE"
-    ) {
-
+    if (attendance.status === "LATE") {
         lateDays++;
 
         calendarData.push({
@@ -1004,15 +838,7 @@ for (
         continue;
     }
 
-    // --------------------------------------------------------
-    // Explicit ABSENT
-    // --------------------------------------------------------
-
-    if (
-        attendance.status ===
-        "ABSENT"
-    ) {
-
+    if (attendance.status === "ABSENT") {
         absentDays++;
 
         calendarData.push({
@@ -1023,17 +849,7 @@ for (
         continue;
     }
 
-    // --------------------------------------------------------
-    // Explicit WEEKEND
-    //
-    // WEEKEND = PRESENT
-    // --------------------------------------------------------
-
-    if (
-        attendance.status ===
-        "WEEKEND"
-    ) {
-
+    if (attendance.status === "WEEKEND") {
         weekendDays++;
 
         calendarData.push({
@@ -1048,12 +864,6 @@ for (
         continue;
     }
 
-    // --------------------------------------------------------
-    // Unknown status
-    //
-    // Safety fallback = ABSENT
-    // --------------------------------------------------------
-
     absentDays++;
 
     calendarData.push({
@@ -1062,69 +872,27 @@ for (
     });
 }
 
-// ------------------------------------------------------------
-// Present-like days
-//
 // Everything except ABSENT / NOT_JOINED
 // is treated as present for attendance rate.
 // ------------------------------------------------------------
 
-const presentLikeDays =
-    presentDays +
-    lateDays +
-    weekendDays +
-    holidayDays +
-    leaveDays;
+const presentLikeDays = presentDays + lateDays + weekendDays + holidayDays + leaveDays;
 
-// ------------------------------------------------------------
-// Total applicable elapsed days
-// ------------------------------------------------------------
+const totalElapsedDays = presentLikeDays + absentDays;
 
-const totalElapsedDays =
-    presentLikeDays +
-    absentDays;
+const attendanceRate = totalElapsedDays > 0  ? Math.round((presentLikeDays / totalElapsedDays) * 100) : 0;
 
-// ------------------------------------------------------------
-// Attendance rate
-// ------------------------------------------------------------
-
-const attendanceRate =
-    totalElapsedDays > 0
-        ? Math.round(
-            (
-                presentLikeDays /
-                totalElapsedDays
-            ) * 100
-        )
-        : 0;
-
-// ------------------------------------------------------------
 // Safety clamp
-// ------------------------------------------------------------
 
-const safeAttendanceRate =
-    Math.min(
-        100,
-        Math.max(
-            0,
-            attendanceRate
-        )
-    );
+const safeAttendanceRate = Math.min(100, Math.max(0, attendanceRate));
 
-// ------------------------------------------------------------
-// Clock-in / worked time
-// ------------------------------------------------------------
-
-const clockedIn =
-    todayAttendance?.checkIn != null;
+const clockedIn = todayAttendance?.checkIn != null;
 
 let workedMinutes = 0;
 
 if (clockedIn) {
 
-    const checkoutTime =
-        todayAttendance.checkOut ||
-        new Date();
+    const checkoutTime = todayAttendance.checkOut || new Date();
 
     workedMinutes =
         Math.max(
@@ -1140,17 +908,9 @@ if (clockedIn) {
         );
 }
 
-const workedHours =
-    Math.floor(
-        workedMinutes / 60
-    );
+const workedHours = Math.floor(workedMinutes / 60);
 
-const workedMins =
-    workedMinutes % 60;
-
-// ------------------------------------------------------------
-// Leave balance
-// ------------------------------------------------------------
+const workedMins = workedMinutes % 60;
 
 const leaveBalance = {
     SICK: {
@@ -1202,8 +962,7 @@ const monthNames = [
     "Dec"
 ];
 
-const salaryHistoryData =
-    [...salaryHistory]
+const salaryHistoryData = [...salaryHistory]
         .reverse()
         .map((p) => ({
             label:
@@ -1234,80 +993,34 @@ if (nextHoliday) {
     daysUntilHoliday = Math.max(0, diff);
 }
 
-// ------------------------------------------------------------
-// RETURN
-// ------------------------------------------------------------
-
 return {
     role: "EMPLOYEE",
-
     employee: {
         ...employee,
-
-        id:
-            employee._id.toString()
+        id: employee._id.toString()
     },
-
-    // Final attendance percentage
-    attendanceRate:
-        safeAttendanceRate,
-
-    // Attendance breakdown
+    attendanceRate: safeAttendanceRate,
     attendanceSummary: {
-        totalDays:
-            totalElapsedDays,
-
-        presentDays:
-            presentDays,
-
-        lateDays:
-            lateDays,
-
-        leaveDays:
-            leaveDays,
-
-        holidayDays:
-            holidayDays,
-
-        weekendDays:
-            weekendDays,
-
-        absentDays:
-            absentDays,
-
-        notJoinedDays:
-            notJoinedDays,
-
-        presentLikeDays:
-            presentLikeDays
+        totalDays: totalElapsedDays,
+        presentDays: presentDays,
+        lateDays: lateDays,
+        leaveDays: leaveDays,
+        holidayDays: holidayDays,
+        weekendDays: weekendDays,
+        absentDays: absentDays,
+        notJoinedDays: notJoinedDays,
+        presentLikeDays: presentLikeDays
     },
-
     pendingLeaves,
-
-    latestPayslip:
-        latestPayslip
-            ? {
-                ...latestPayslip,
-
-                id:
-                    latestPayslip._id.toString()
-            }
-            : null,
-
-    salaryHistory:
-        salaryHistoryData,
-
+    latestPayslip: latestPayslip ? {...latestPayslip, id: latestPayslip._id.toString()} : null,
+    salaryHistory: salaryHistoryData,
     leaveBalance,
-
     todayShift:
-
         isTodayWeekend
-
             ? {
                 name: "Weekend",
                 isWeekend: true
             }
-
             : todayShiftAssignment
                 ? {
                     name:
@@ -1315,40 +1028,24 @@ return {
                             .shiftId
                             ?.name ||
                         "N/A",
-
                     startTime:
                         todayShiftAssignment
                             .shiftId
                             ?.startTime ||
                         "",
-
                     endTime:
                         todayShiftAssignment
                             .shiftId
                             ?.endTime ||
                         "",
-
                     isWeekend: false
                 }
-
                 : null,
-
     clockedIn,
-
-    checkInTime:
-        todayAttendance?.checkIn ||
-        null,
-
-    workedTime:
-        clockedIn
-            ? `${workedHours}h ${workedMins}m`
-            : null,
-
-    attendanceCalendar:
-        calendarData,
-
+    checkInTime: todayAttendance?.checkIn || null,
+    workedTime: clockedIn ? `${workedHours}h ${workedMins}m` : null,
+    attendanceCalendar: calendarData,
     nextHoliday:
-
         nextHoliday
 
             ? {

@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import api from '../api/axios';
+import { createContext, useContext, useState, useEffect } from "react";
+import api from "../api/axios";
 
 const AuthContext = createContext(null);
 
@@ -8,15 +8,16 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
 
     if (token) {
-      api.get('/session')
-        .then(res => {
+      api
+        .get("/session")
+        .then((res) => {
           setUser(res.data.user);
         })
         .catch(() => {
-          localStorage.removeItem('accessToken');
+          localStorage.removeItem("accessToken");
           setUser(null);
         })
         .finally(() => {
@@ -28,17 +29,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password, role_type) => {
-    const { data } = await api.post('/login', {
+    const { data } = await api.post("/login", {
       email,
       password,
-      role_type
+      role_type,
     });
 
-    // Only access token is stored in localStorage
     // Refresh token is stored by backend as HttpOnly cookie
-    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem("accessToken", data.accessToken);
 
-    const session = await api.get('/session');
+    const session = await api.get("/session");
 
     setUser(session.data.user);
 
@@ -47,12 +47,10 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await api.post('/logout');
+      await api.post("/logout");
     } catch {}
 
-    // Only remove access token
-    // Refresh token is cleared by backend /logout
-    localStorage.removeItem('accessToken');
+    localStorage.removeItem("accessToken");
 
     setUser(null);
   };
@@ -63,7 +61,7 @@ export function AuthProvider({ children }) {
         user,
         login,
         logout,
-        loading
+        loading,
       }}
     >
       {children}

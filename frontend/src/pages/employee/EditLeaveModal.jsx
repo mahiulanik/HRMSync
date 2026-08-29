@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { getApiError } from "../../utils/apiError";
 import Modal from "../../components/Modal";
 import { FileText, Calendar } from "lucide-react";
 
-export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
+export default function EditLeaveModal({ isOpen, onClose, leave, onSuccess }) {
   const [form, setForm] = useState({
     type: "SICK",
     startDate: "",
@@ -14,6 +14,21 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (leave) {
+      setForm({
+        type: leave.type || "SICK",
+        startDate: leave.startDate
+          ? new Date(leave.startDate).toISOString().split("T")[0]
+          : "",
+        endDate: leave.endDate
+          ? new Date(leave.endDate).toISOString().split("T")[0]
+          : "",
+        reason: leave.reason || "",
+      });
+    }
+  }, [leave]);
+
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -22,12 +37,11 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
     setError("");
     setLoading(true);
     try {
-      await api.post("/create-leave", form);
+      await api.put(`/edit-leave/${leave._id}`, form);
       onSuccess();
       onClose();
-      setForm({ type: "SICK", startDate: "", endDate: "", reason: "" });
     } catch (err) {
-      setError(getApiError(err, "Failed to apply for leave"));
+      setError(getApiError(err, "Failed to update leave"));
     } finally {
       setLoading(false);
     }
@@ -37,8 +51,8 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Apply for Leave"
-      subtitle="Submit your leave request for approval"
+      title="Edit Leave"
+      subtitle="Update your leave request"
     >
       {error && (
         <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
@@ -122,7 +136,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
             disabled={loading}
             className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
           >
-            <FileText size={16} /> {loading ? "Submitting..." : "Submit"}
+            <FileText size={16} /> {loading ? "Updating..." : "Update"}
           </button>
         </div>
       </form>

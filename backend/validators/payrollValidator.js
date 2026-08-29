@@ -15,7 +15,6 @@ export const generatePayrollValidation = [
         .withMessage("Year must be between 2000 and 2100"),
 ];
 
-
 export const companyPayrollValidation = [
     query("month")
         .notEmpty()
@@ -29,7 +28,6 @@ export const companyPayrollValidation = [
         .isInt({ min: 2000, max: 2100 })
         .withMessage("Year must be between 2000 and 2100"),
 ];
-
 
 export const departmentPayrollValidation = [
     param("department")
@@ -49,7 +47,6 @@ export const departmentPayrollValidation = [
         .isInt({ min: 2000, max: 2100 })
         .withMessage("Year must be between 2000 and 2100"),
 ];
-
 
 export const employeePayrollValidation = [
     param("employeeId")
