@@ -41,14 +41,14 @@ router.delete("/employees/:id", authMiddleware, requiredAdmin, employeeIdValidat
 
 
 // Authentication Routes
-router.post("/login", loginValidation, validate, authController.login)
+router.post("/login", authLimiter, loginValidation, validate, authController.login)
 router.get("/session", authMiddleware, authController.session)
 router.post("/change-password", authMiddleware, changePasswordValidation, validate, asyncHandler(authController.changePass))
 router.post("/logout", authMiddleware, authController.logout);
 router.post("/refresh-token", authController.refreshToken);
-router.post("/forgot-password", forgotPasswordValidation, validate, asyncHandler(authController.sendPasswordResetOTP))
-router.post("/verify-reset-otp", verifyResetOTPValidation, validate, asyncHandler(authController.verifyPasswordResetOTP))
-router.post("/reset-password", resetPasswordValidation, validate, asyncHandler(authController.resetEmployeePassword))
+router.post("/forgot-password", authLimiter, forgotPasswordValidation, validate, asyncHandler(authController.sendPasswordResetOTP))
+router.post("/verify-reset-otp", authLimiter, verifyResetOTPValidation, validate, asyncHandler(authController.verifyPasswordResetOTP))
+router.post("/reset-password", authLimiter, resetPasswordValidation, validate, asyncHandler(authController.resetEmployeePassword))
 
 
 // Profile Routes
