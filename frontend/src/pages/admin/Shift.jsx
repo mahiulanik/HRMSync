@@ -164,6 +164,16 @@ export default function AdminShift() {
       alert(getApiError(err, "Failed to save"));
     }
   };
+
+  const handleHolidayDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this holiday?")) return;
+    try {
+      await api.delete(`/public-holidays/${id}`);
+      fetchPublicHolidays();
+    } catch (err) {
+      alert(getApiError(err, "Failed to delete"));
+    }
+  };
   const handleShiftSave = async () => {
     try {
       if (editingShift)
