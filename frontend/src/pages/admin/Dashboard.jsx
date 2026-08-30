@@ -306,7 +306,7 @@ export default function AdminDashboard() {
                         ? "bg-success"
                         : dept.rate >= 70
                           ? "bg-warning"
-                          : "bg-danger"
+                          : "bg-success"
                     }`}
                     style={{ width: `${dept.rate}%` }}
                   />

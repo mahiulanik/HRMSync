@@ -64,6 +64,13 @@ export default function EmployeeDashboard() {
   const position = stats.employee?.position || "";
   const department = stats.employee?.department || "";
 
+  const nowDhaka = new Date(
+    new Date().getTime() + new Date().getTimezoneOffset() * 60000 + 6 * 3600000
+  );
+  const hour = nowDhaka.getHours();
+  const greeting =
+    hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
@@ -112,7 +119,7 @@ export default function EmployeeDashboard() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold">
-          Good Evening, {name.split(" ")[0]} 👋
+          {greeting}, {name.split(" ")[0]} 👋
         </h1>
         <p className="text-text-secondary text-sm mt-1">
           {position}
@@ -152,6 +159,10 @@ export default function EmployeeDashboard() {
           stats.todayShift.isWeekend ? (
             <div className="text-center text-text-secondary text-sm py-4">
               🎉 It's the weekend — no shift scheduled
+            </div>
+          ) : stats.todayShift.isHoliday ? (
+            <div className="text-center text-text-secondary text-sm py-4">
+              🎉 Today is {stats.todayShift.name} — enjoy your day off
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -309,22 +320,48 @@ export default function EmployeeDashboard() {
         </SectionCard>
       </div>
 
-      {/* Next Holiday */}
-      {stats.nextHoliday && (
-        <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Gift size={22} className="text-primary" />
+      {/* Upcoming Holidays */}
+      {stats.upcomingHolidays?.length > 0 && (
+        <SectionCard title="🎉 Upcoming Holidays" className="mb-6">
+          <div className="space-y-3">
+            {stats.upcomingHolidays.map((holiday, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 rounded-lg bg-page-bg"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Gift size={18} className="text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold">{holiday.name}</div>
+                    <div className="text-[11px] text-text-secondary">
+                      {new Date(holiday.startDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                      {holiday.startDate !== holiday.endDate && (
+                        <>
+                          {" "}
+                          —{" "}
+                          {new Date(holiday.endDate).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm font-bold text-primary">
+                  {holiday.daysRemaining === 0
+                    ? "Today!"
+                    : `${holiday.daysRemaining}d`}
+                </div>
+              </div>
+            ))}
           </div>
-          <div>
-            <div className="text-sm text-text-secondary">🎉 Next Holiday</div>
-            <div className="text-lg font-bold">{stats.nextHoliday.name}</div>
-            <div className="text-xs text-text-secondary mt-0.5">
-              {stats.nextHoliday.daysRemaining === 0
-                ? "Today!"
-                : `${stats.nextHoliday.daysRemaining} Day${stats.nextHoliday.daysRemaining > 1 ? "s" : ""} Remaining`}
-            </div>
-          </div>
-        </div>
+        </SectionCard>
       )}
     </div>
   );

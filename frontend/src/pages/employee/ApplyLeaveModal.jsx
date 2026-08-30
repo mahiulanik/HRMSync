@@ -58,7 +58,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
           >
             <option value="SICK">Sick Leave</option>
             <option value="CASUAL">Casual Leave</option>
-            <option value="EARNED">Annual Leave</option>
+            <option value="EARNED">Earned Leave</option>
           </select>
         </div>
 

@@ -72,7 +72,7 @@ export default function EditLeaveModal({ isOpen, onClose, leave, onSuccess }) {
           >
             <option value="SICK">Sick Leave</option>
             <option value="CASUAL">Casual Leave</option>
-            <option value="EARNED">Annual Leave</option>
+            <option value="EARNED">Earned Leave</option>
           </select>
         </div>
 

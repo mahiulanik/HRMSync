@@ -54,9 +54,18 @@ export const getLeaves = async (session, query) => {
             where.startDate = { $gte: startOfMonth, $lte: endOfMonth };
         }
 
-        const leaves = await Leave.find(where)
-            .populate("employeeId")
-            .sort({ createdAt: -1 });
+        const pageNum = Math.max(1, parseInt(query.page) || 1);
+        const limitNum = Math.min(50, Math.max(1, parseInt(query.limit) || 20));
+        const skip = (pageNum - 1) * limitNum;
+
+        const [leaves, totalCount] = await Promise.all([
+            Leave.find(where)
+                .populate("employeeId", "firstName lastName email department position")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limitNum),
+            Leave.countDocuments(where)
+        ]);
 
         const data = leaves.map((leave) => {
             const obj = leave.toObject();
@@ -67,7 +76,15 @@ export const getLeaves = async (session, query) => {
                 employeeId: obj.employeeId?._id?.toString()
             };
         });
-        return { data };
+        return {
+            data,
+            pagination: {
+                currentPage: pageNum,
+                totalPages: Math.ceil(totalCount / limitNum),
+                totalCount,
+                limit: limitNum
+            }
+        };
     }
 
     const employee = await Employee.findOne({
@@ -95,9 +112,6 @@ export const getLeaves = async (session, query) => {
 export const updateLeave = async (id, leaveData) => {
     const { status } = leaveData;
 
-    if (!["APPROVED", "REJECTED", "PENDING"].includes(status)) {
-        throw new AppError("Invalid status", 400);
-    }
     const leave = await Leave.findByIdAndUpdate(
         id,
         { status },
@@ -136,16 +150,8 @@ export const editLeave = async (userId, id, leaveData) => {
 
     const { type, startDate, endDate, reason } = leaveData;
 
-    if (!type || !startDate || !endDate || !reason) {
-        throw new AppError("Missing required fields", 400);
-    }
-
     const start = new Date(startDate);
     const end = new Date(endDate);
-
-    if (end < start) {
-        throw new AppError("End date cannot be before start date", 400);
-    }
 
     const updated = await Leave.findByIdAndUpdate(
         id,

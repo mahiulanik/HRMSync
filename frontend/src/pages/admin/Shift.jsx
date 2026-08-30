@@ -737,11 +737,6 @@ export default function AdminShift() {
                               month: "short",
                               day: "numeric",
                             })}
-                            {isWeekend && (
-                              <span className="ml-2 text-xs text-amber-500 font-medium">
-                                Weekend
-                              </span>
-                            )}
                           </td>
                           <td className="px-4 sm:px-6 py-4 text-sm font-medium">
                             {editingAssignment?._id === s._id ? (
@@ -756,12 +751,14 @@ export default function AdminShift() {
                                   </option>
                                 ))}
                               </select>
+                            ) : isWeekend ? (
+                              <span className="text-amber-600 font-medium">Weekend</span>
                             ) : (
                               s.shift?.name
                             )}
                           </td>
                           <td className="px-4 sm:px-6 py-4 text-sm text-text-secondary">
-                            {s.shift?.startTime} - {s.shift?.endTime}
+                            {isWeekend ? "" : `${s.shift?.startTime} - ${s.shift?.endTime}`}
                           </td>
                           <td className="px-4 sm:px-6 py-4">
                             <div className="flex gap-2">

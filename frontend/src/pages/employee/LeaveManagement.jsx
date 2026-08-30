@@ -77,7 +77,7 @@ export default function EmployeeLeave() {
           className="border-l-4 border-l-primary"
         />
         <StatCard
-          title="Annual Leave"
+          title="Earned Leave"
           value={`${earnedCount} taken`}
           icon={Award}
           className="border-l-4 border-l-primary"

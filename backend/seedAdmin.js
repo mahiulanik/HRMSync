@@ -1,4 +1,5 @@
 import "dotenv/config";
+import mongoose from "mongoose";
 import connectDB from "./config/db.js";
 import User from "./models/userModel.js";
 import bcrypt from "bcrypt";
@@ -21,6 +22,7 @@ async function registerAdmin() {
 
         if(existingAdmin) {
             console.log("User already exists as role", existingAdmin.role)
+            await mongoose.disconnect()
             process.exit(0)
         }
 
@@ -36,6 +38,8 @@ async function registerAdmin() {
 
     } catch (error) {
         console.error("Seed Failed", error)
+    } finally {
+        await mongoose.disconnect();
     }
 }
 

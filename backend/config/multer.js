@@ -25,7 +25,13 @@ const upload = multer({
     storage,
     fileFilter,
     limits: {
-        fileSize: 300 * 1024 
+        fileSize: 300 * 1024
+    },
+    onError: (err, next) => {
+        if (err) {
+            err.buffer = null;
+        }
+        next(err);
     }
 });
 

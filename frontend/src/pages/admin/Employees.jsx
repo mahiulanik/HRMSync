@@ -58,6 +58,7 @@ export default function AdminEmployees() {
     limit: 10,
   });
   const [searchInput, setSearchInput] = useState("");
+  const [todayAttendance, setTodayAttendance] = useState({ statusMap: {}, isWeekend: false });
 
   const fetchEmployees = () => {
     const params = new URLSearchParams();
@@ -87,6 +88,13 @@ export default function AdminEmployees() {
   useEffect(() => {
     fetchEmployees();
   }, [dept, showDeleted, page, sortBy, sortOrder, search]);
+
+  useEffect(() => {
+    api
+      .get("/admin/today-attendance")
+      .then((res) => setTodayAttendance(res.data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -197,10 +205,41 @@ export default function AdminEmployees() {
               />
             </div>
             <div className="p-4">
-              <div className="font-semibold">
-                {emp.firstName} {emp.lastName}
+              <div className="flex items-center justify-between">
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">
+                    {emp.firstName} {emp.lastName}
+                  </div>
+                  <div className="text-sm text-text-secondary truncate">{emp.position}</div>
+                </div>
+                {(() => {
+                  if (emp.isDeleted) return null;
+                  if (todayAttendance.isWeekend) {
+                    return (
+                      <span className="shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium bg-gray-100 text-gray-700">
+                        WEEKEND
+                      </span>
+                    );
+                  }
+                  const status = todayAttendance.statusMap[emp._id];
+                  if (!status) return (
+                    <span className="shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium bg-red-100 text-red-700">
+                      ABSENT
+                    </span>
+                  );
+                  const statusStyles = {
+                    PRESENT: "bg-green-100 text-green-700",
+                    LATE: "bg-orange-100 text-orange-700",
+                    WEEKEND: "bg-gray-100 text-gray-700",
+                    HOLIDAY: "bg-purple-100 text-purple-700",
+                  };
+                  return (
+                    <span className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${statusStyles[status] || "bg-gray-100 text-gray-700"}`}>
+                      {status}
+                    </span>
+                  );
+                })()}
               </div>
-              <div className="text-sm text-text-secondary">{emp.position}</div>
             </div>
           </div>
         ))}

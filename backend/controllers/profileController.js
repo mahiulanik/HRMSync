@@ -11,7 +11,8 @@ export const getUserProfile = asyncHandler(async (req, res) => {
 export const updateUserProfile = asyncHandler(async (req, res) => {
     const result = await profileService.updateProfile(
         req.session.userId,
-        req.body
+        req.body,
+        req.session.role
     );
 
     return res.status(200).json(result);

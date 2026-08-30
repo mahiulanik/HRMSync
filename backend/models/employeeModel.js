@@ -23,6 +23,10 @@ const employeeSchema = new mongoose.Schema({
     profilePic: {type: String, default: null}
 }, {timestamps: true, versionKey: false})
 
+employeeSchema.index({ isDeleted: 1 });
+employeeSchema.index({ isDeleted: 1, employeeStatus: 1 });
+employeeSchema.index({ isDeleted: 1, department: 1 });
+
 
 const Employee = mongoose.model("Employee", employeeSchema)
 

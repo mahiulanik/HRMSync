@@ -10,6 +10,9 @@ const leaveSchema = new mongoose.Schema({
     status: {type: String, enum: ["PENDING", "APPROVED", "REJECTED"], default: "PENDING"}
 }, {timestamps: true, versionKey: false})
 
+leaveSchema.index({ employeeId: 1, status: 1 });
+leaveSchema.index({ status: 1, startDate: 1 });
+
 const Leave = mongoose.models.Leave || mongoose.model("Leave", leaveSchema)
 
 export default Leave

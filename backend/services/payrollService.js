@@ -5,43 +5,108 @@ import Attendance from "../models/attendanceModel.js";
 import Leave from "../models/leaveModel.js";
 import Payroll from "../models/payrollModel.js";
 import Payslip from "../models/payslipModel.js";
+import ShiftAssignment from "../models/shiftAssignmentModel.js";
 
 import AppError from "../utils/AppError.js";
 
-import {PAID_LEAVE_TYPES} from "../constants/payroll.js";
+import { PAID_LEAVE_TYPES, WEEKEND_DAYS } from "../constants/payroll.js";
 
-import {getMonthDateRange, getWorkingDaysInMonth, normalizeDate, roundMoney, calculateOvertimeAmount} from "../utils/payrollUtils.js";
+import { getMonthDateRange, getWorkingDaysInMonth, normalizeDate, roundMoney, calculateOvertimeAmount } from "../utils/payrollUtils.js";
+import { toDateKey } from "../utils/dateHelpers.js";
 
+// ─── Helpers ─────────────────────────────────────────────────
+
+
+// ─── Reusable: Build shift weekend map for all employees ─────
+
+const buildShiftWeekendMap = async (employeeIds, startDate, endDate) => {
+    const assignments = await ShiftAssignment.find({
+        employeeId: { $in: employeeIds },
+        date: { $gte: startDate, $lt: endDate }
+    }).populate("shiftId", "weekends").lean();
+
+    // Key: "employeeId-dateKey" → Set of weekend day-of-week numbers
+    const map = {};
+    for (const a of assignments) {
+        if (!a.shiftId?.weekends) continue;
+        const key = `${a.employeeId}-${normalizeDate(a.date).getTime()}`;
+        map[key] = new Set(a.shiftId.weekends);
+    }
+    return map;
+};
+
+/** Check if a date is a weekend for a given employee */
+const isEmployeeWeekend = (employeeId, date, shiftWeekendMap) => {
+    const key = `${employeeId}-${normalizeDate(date).getTime()}`;
+    const weekends = shiftWeekendMap[key];
+    if (weekends) {
+        return weekends.has(date.getDay());
+    }
+    // Fallback to company default weekends
+    return WEEKEND_DAYS.includes(date.getDay());
+};
+
+
+// ─── Generate Payroll ────────────────────────────────────────
 
 export const generatePayroll = async (month, year) => {
-
     month = Number(month);
     year = Number(year);
 
-    const existingPayroll = await Payroll.findOne({
-        month,
-        year
-    });
-
+    const existingPayroll = await Payroll.findOne({ month, year });
     if (existingPayroll) {
         throw new AppError(`Payroll already exists for ${month}/${year}`, 409);
     }
 
-    const {startDate, endDate} = getMonthDateRange(month, year);
-
+    const { startDate, endDate } = getMonthDateRange(month, year);
     const workingDates = getWorkingDaysInMonth(month, year);
-
     const workingDays = workingDates.length;
 
     const employees = await Employee.find({
-        isDeleted: {
-            $ne: true
-        },
+        isDeleted: { $ne: true },
         employeeStatus: "Active"
-    }).lean();
+    }).limit(500).lean();
 
     if (!employees.length) {
         throw new AppError("No active employees found", 404);
+    }
+
+    const employeeIds = employees.map(e => e._id);
+
+    // Batch all queries upfront (no N+1)
+    const [allAttendance, allLeaves, shiftWeekendMap] = await Promise.all([
+        Attendance.find({
+            employeeId: { $in: employeeIds },
+            date: { $gte: startDate, $lt: endDate }
+        }).lean(),
+
+        Leave.find({
+            employeeId: { $in: employeeIds },
+            status: "APPROVED",
+            startDate: { $lt: endDate },
+            endDate: { $gte: startDate }
+        }).lean(),
+
+        buildShiftWeekendMap(employeeIds, startDate, endDate)
+    ]);
+
+    // Delete existing payslips for this month/year to allow regeneration
+    await Payslip.deleteMany({ month, year });
+
+    // Index attendance by employeeId
+    const attendanceByEmployee = {};
+    for (const record of allAttendance) {
+        const eid = String(record.employeeId);
+        if (!attendanceByEmployee[eid]) attendanceByEmployee[eid] = [];
+        attendanceByEmployee[eid].push(record);
+    }
+
+    // Index leaves by employeeId
+    const leavesByEmployee = {};
+    for (const leave of allLeaves) {
+        const eid = String(leave.employeeId);
+        if (!leavesByEmployee[eid]) leavesByEmployee[eid] = [];
+        leavesByEmployee[eid].push(leave);
     }
 
     const session = await mongoose.startSession();
@@ -50,30 +115,27 @@ export const generatePayroll = async (month, year) => {
         session.startTransaction();
 
         const [payroll] = await Payroll.create(
-            [
-                {
-                    month,
-                    year,
-                    totalEmployees: employees.length,
-                    totalGrossSalary: 0,
-                    totalDeductions: 0,
-                    totalNetSalary: 0,
-                    status: "DRAFT"
-                }
-            ],
-            {
-                session
-            }
+            [{
+                month,
+                year,
+                totalEmployees: employees.length,
+                totalGrossSalary: 0,
+                totalDeductions: 0,
+                totalNetSalary: 0,
+                status: "DRAFT"
+            }],
+            { session }
         );
 
         let totalGrossSalary = 0;
         let totalDeductions = 0;
         let totalNetSalary = 0;
 
+        const payslipDocs = [];
 
         for (const employee of employees) {
-
             const employeeId = employee._id;
+            const eid = String(employeeId);
             const grossSalary = Number(employee.grossSalary || 0);
             const basicSalary = Number(employee.basicSalary || grossSalary * 0.5);
             const houseRent = Number(employee.houseRent || 0);
@@ -82,63 +144,32 @@ export const generatePayroll = async (month, year) => {
             const allowances = Number(employee.allowances || 0);
             const otherDeductions = Number(employee.deductions || 0);
 
-
-            const attendance = await Attendance.find({
-                employeeId,
-                date: {
-                    $gte: startDate,
-                    $lt: endDate
-                }
-            })
-                .session(session)
-                .lean();
-
-
-            const approvedLeaves = await Leave.find({
-                employeeId,
-                status: "APPROVED",
-                startDate: {
-                    $lt: endDate
-                },
-                endDate: {
-                    $gte: startDate
-                }
-            })
-                .session(session)
-                .lean();
-
+            const attendance = attendanceByEmployee[eid] || [];
+            const approvedLeaves = leavesByEmployee[eid] || [];
 
             const presentDates = new Set();
-
             let overtimeMinutes = 0;
 
             for (const record of attendance) {
-
                 const attendanceDate = normalizeDate(record.date);
 
-                const dayOfWeek = attendanceDate.getDay();
-
-                // Friday + Saturday
-                if ([5, 6].includes(dayOfWeek)) {
+                // Use employee's shift weekends instead of hardcoded
+                if (isEmployeeWeekend(employeeId, attendanceDate, shiftWeekendMap)) {
                     continue;
                 }
 
-                const dateKey = attendanceDate.toISOString().split("T")[0];
+                const dateKey = toDateKey(attendanceDate);
 
-                // Only actual attendance counts
                 if (record.status === "PRESENT" || record.status === "LATE") {
                     presentDates.add(dateKey);
                 }
                 overtimeMinutes += Number(record.overtimeMinutes || 0);
             }
 
-
             const paidLeaveDates = new Set();
 
             for (const leave of approvedLeaves) {
-
-                if (!PAID_LEAVE_TYPES.includes(leave.type)
-                ) {
+                if (!PAID_LEAVE_TYPES.includes(leave.type)) {
                     continue;
                 }
 
@@ -146,28 +177,24 @@ export const generatePayroll = async (month, year) => {
                 const leaveEnd = normalizeDate(leave.endDate);
 
                 for (const workingDate of workingDates) {
-
                     if (workingDate >= leaveStart && workingDate <= leaveEnd) {
-
-                        const dateKey = workingDate.toISOString().split("T")[0];
+                        const dateKey = toDateKey(workingDate);
                         paidLeaveDates.add(dateKey);
                     }
                 }
             }
 
-
+            // Remove dates that already have attendance
             for (const date of presentDates) {
                 paidLeaveDates.delete(date);
             }
 
-
             // Days Calculation
-
             const presentDays = presentDates.size;
             const paidLeaveDays = paidLeaveDates.size;
             const absentDays = Math.max(workingDays - presentDays - paidLeaveDays, 0);
 
-            const dailyBasicSalary =  workingDays > 0 ? basicSalary / workingDays : 0;
+            const dailyBasicSalary = workingDays > 0 ? basicSalary / workingDays : 0;
 
             const overtimeAmount = calculateOvertimeAmount({
                 overtimeMinutes,
@@ -176,117 +203,90 @@ export const generatePayroll = async (month, year) => {
                 shiftHours: 8
             });
 
-
             // Gross Salary
-
             const payslipGross = roundMoney(grossSalary + overtimeAmount);
 
             // Attendance Check
-
             const hasAttendance = presentDates.size > 0;
             const hasPaidLeave = paidLeaveDates.size > 0;
 
-
             // Deduction + Net Salary
-
             let unpaidLeaveDeduction = 0;
             let netSalary = 0;
+            let employeeTotalDeductions = 0;
 
             if (!hasAttendance && !hasPaidLeave) {
                 unpaidLeaveDeduction = roundMoney(payslipGross);
                 netSalary = 0;
-
             } else {
-                unpaidLeaveDeduction = roundMoney(
-                    dailyBasicSalary * absentDays
-                );
-
-                const employeeTotalDeductions = roundMoney(unpaidLeaveDeduction + otherDeductions);
-
+                unpaidLeaveDeduction = roundMoney(dailyBasicSalary * absentDays);
+                employeeTotalDeductions = roundMoney(unpaidLeaveDeduction + otherDeductions);
                 netSalary = roundMoney(payslipGross - employeeTotalDeductions);
             }
 
-            // CREATE PAYSLIP
+            // Collect payslip for batch insert
+            payslipDocs.push({
+                    payrollId: payroll._id,
+                    employeeId,
+                    month,
+                    year,
+                    basicSalary,
+                    houseRent,
+                    medical,
+                    conveyance,
+                    allowances,
+                    overtimeAmount,
+                    grossSalary: payslipGross,
+                    unpaidLeaveDeduction,
+                    otherDeductions,
+                    totalDeductions: employeeTotalDeductions,
+                    netSalary,
+                    workingDays,
+                    presentDays,
+                    paidLeaveDays,
+                    unpaidLeaveDays: absentDays
+            });
 
-            await Payslip.create(
-                [
-                    {
-                        payrollId: payroll._id,
-                        employeeId,
-                        month,
-                        year,
-                        basicSalary,
-                        houseRent,
-                        medical,
-                        conveyance,
-                        allowances,
-                        overtimeAmount,
-                        grossSalary: payslipGross,
-                        unpaidLeaveDeduction,
-                        otherDeductions,
-                        totalDeductions: employeeTotalDeductions,
-                        netSalary,
-                        workingDays,
-                        presentDays,
-                        paidLeaveDays,
-                        unpaidLeaveDays: absentDays
-                    }
-                ],
-                {
-                    session
-                }
-            );
-
-
-            // COMPANY TOTALS
-
+            // Company totals
             totalGrossSalary += payslipGross;
             totalDeductions += employeeTotalDeductions;
             totalNetSalary += netSalary;
         }
 
+        // Batch insert all payslips at once
+        if (payslipDocs.length > 0) {
+            await Payslip.insertMany(payslipDocs, { session });
+        }
 
-        // UPDATE PAYROLL
-
+        // Update payroll totals
         payroll.totalGrossSalary = roundMoney(totalGrossSalary);
         payroll.totalDeductions = roundMoney(totalDeductions);
         payroll.totalNetSalary = roundMoney(totalNetSalary);
         payroll.status = "PROCESSED";
         payroll.processedAt = new Date();
 
-        await payroll.save({
-            session
-        });
-
-        // COMMIT
+        await payroll.save({ session });
 
         await session.commitTransaction();
 
-        return {
-            success: true,
-            data: payroll
-        };
+        return { success: true, data: payroll };
 
     } catch (error) {
-
         await session.abortTransaction();
-
         throw error;
-
     } finally {
-
         await session.endSession();
     }
 };
 
 
+// ─── Company Payroll ─────────────────────────────────────────
 
 export const getCompanyPayroll = async (month, year) => {
-
     month = Number(month);
     year = Number(year);
 
-    const payroll = await Payroll.findOne({month, year}).lean();
+    const payroll = await Payroll.findOne({ month, year }).lean();
 
     if (!payroll) {
         throw new AppError("Payroll not found for this month", 404);
@@ -309,26 +309,14 @@ export const getCompanyPayroll = async (month, year) => {
 };
 
 
-export const getDepartmentPayroll = async (department, month, year) => {
+// ─── Department Payroll ──────────────────────────────────────
 
+export const getDepartmentPayroll = async (department, month, year) => {
     month = Number(month);
     year = Number(year);
 
-    if (!department) {
-        throw new AppError("Department is required", 400);
-    }
-
-    // AGGREGATION
-
     const result = await Payslip.aggregate([
-        {
-            $match: {
-                month,
-                year
-            }
-        },
-
-        // Join Employee collection
+        { $match: { month, year } },
         {
             $lookup: {
                 from: "employees",
@@ -337,39 +325,17 @@ export const getDepartmentPayroll = async (department, month, year) => {
                 as: "employee"
             }
         },
-
-        // Convert employee array → object
-        {
-            $unwind: "$employee"
-        },
-
-        {
-            $match: {
-                "employee.department":
-                    department
-            }
-        },
-
+        { $unwind: "$employee" },
+        { $match: { "employee.department": department } },
         {
             $group: {
                 _id: "$employee.department",
-                totalEmployees: {
-                    $sum: 1
-                },
-                totalGrossSalary: {
-                    $sum: "$grossSalary"
-                },
-                totalDeductions: {
-                    $sum: "$totalDeductions"
-                },
-                totalNetSalary: {
-                    $sum: "$netSalary"
-                }
+                totalEmployees: { $sum: 1 },
+                totalGrossSalary: { $sum: "$grossSalary" },
+                totalDeductions: { $sum: "$totalDeductions" },
+                totalNetSalary: { $sum: "$netSalary" }
             }
         },
-
-        // Format response
-
         {
             $project: {
                 _id: 0,
@@ -394,24 +360,22 @@ export const getDepartmentPayroll = async (department, month, year) => {
             year,
             totalEmployees: result[0].totalEmployees,
             totalGrossSalary: roundMoney(result[0].totalGrossSalary),
-            totalDeductions:  roundMoney(result[0].totalDeductions),
+            totalDeductions: roundMoney(result[0].totalDeductions),
             totalNetSalary: roundMoney(result[0].totalNetSalary)
         }
     };
 };
 
 
-
+// ─── Employee Payroll ────────────────────────────────────────
 
 export const getEmployeePayroll = async (employeeId, month, year) => {
-
     month = Number(month);
     year = Number(year);
 
-    const payslip = await Payslip.findOne({employeeId, month, year})
+    const payslip = await Payslip.findOne({ employeeId, month, year })
         .populate("employeeId")
         .lean();
-
 
     if (!payslip) {
         throw new AppError("Payslip not found for this employee and month", 404);
@@ -429,7 +393,6 @@ export const getEmployeePayroll = async (employeeId, month, year) => {
                 email: employee.email,
                 department: employee.department
             },
-
             payslip: {
                 id: payslip._id.toString(),
                 month: payslip.month,
@@ -453,8 +416,3 @@ export const getEmployeePayroll = async (employeeId, month, year) => {
         }
     };
 };
-
-
-
-
-

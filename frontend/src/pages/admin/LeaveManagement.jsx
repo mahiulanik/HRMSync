@@ -169,13 +169,13 @@ export default function AdminLeave() {
                     {leave.status === "PENDING" && (
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleStatus(leave._id, "APPROVED")}
+                          onClick={(e) => { e.stopPropagation(); handleStatus(leave._id, "APPROVED"); }}
                           className="text-xs bg-green-50 text-green-600 px-3 py-1 rounded-full hover:bg-green-100 cursor-pointer"
                         >
                           Approve
                         </button>
                         <button
-                          onClick={() => handleStatus(leave._id, "REJECTED")}
+                          onClick={(e) => { e.stopPropagation(); handleStatus(leave._id, "REJECTED"); }}
                           className="cursor-pointer text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full hover:bg-red-100"
                         >
                           Reject

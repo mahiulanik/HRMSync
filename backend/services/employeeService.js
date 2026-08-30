@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import User from "../models/userModel.js";
 import Employee from "../models/employeeModel.js";
 import AppError from "../utils/AppError.js";
+import { escapeRegex } from "../utils/dateHelpers.js";
 
 
 export const createEmployee = async (data) => {
@@ -88,11 +89,12 @@ export const getEmployees = async (department, showDeleted, onlyDeleted, page = 
   }
 
   if (search) {
+    const safe = escapeRegex(search);
     where.$or = [
-      { firstName: { $regex: search, $options: 'i' } },
-      { lastName: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
-      { position: { $regex: search, $options: 'i' } },
+      { firstName: { $regex: safe, $options: 'i' } },
+      { lastName: { $regex: safe, $options: 'i' } },
+      { email: { $regex: safe, $options: 'i' } },
+      { position: { $regex: safe, $options: 'i' } },
     ];
   }
 
@@ -139,10 +141,6 @@ export const getEmployees = async (department, showDeleted, onlyDeleted, page = 
 
 
 export const getEmployeeById = async (id) => {
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new AppError("Invalid employee ID", 400);
-    }
 
   const employee = await Employee.findById(id)
     .populate("userId", "email role")
@@ -247,10 +245,6 @@ export const updateEmployee = async (id, data) => {
 };
 
 export const deleteEmployee = async (id) => {
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new AppError("Invalid employee ID", 400);
-    }
 
     const employee = await Employee.findById(id);
 

@@ -2,6 +2,7 @@ import ShiftAssignment from "../models/shiftAssignmentModel.js";
 import Employee from "../models/employeeModel.js";
 import Shift from "../models/shiftModel.js";
 import AppError from "../utils/AppError.js";
+import { toDateKey } from "../utils/dateHelpers.js";
 
 
 export const getMyShifts = async (userId, startDate, endDate) => {
@@ -306,42 +307,51 @@ export const assignShiftForMonth = async (assignmentData) => {
     const updated = [];
     const skipped = [];
 
+    // Fetch all existing assignments for this employee in the month at once
+    const startDate = new Date(year, month - 1, 1);
+    const existingAssignments = await ShiftAssignment.find({
+        employeeId,
+        date: { $gte: startDate, $lte: endDate }
+    }).lean();
+
+    const existingMap = {};
+    for (const a of existingAssignments) {
+        const key = toDateKey(a.date);
+        existingMap[key] = a;
+    }
+
+    const bulkOps = [];
+
     for (let day = 1; day <= daysInMonth; day++) {
-
-        const date = new Date(
-            year,
-            month - 1,
-            day
-        );
-
+        const date = new Date(year, month - 1, day);
         date.setHours(0, 0, 0, 0);
+        const dateKey = toDateKey(date);
 
-        const existing = await ShiftAssignment.findOne({
-                employeeId,
-                date
-            });
+        const existing = existingMap[dateKey];
 
         if (existing) {
-
             if (existing.shiftId.toString() !== shiftId) {
-
-                existing.shiftId = shiftId;
-
-                await existing.save();
-
+                bulkOps.push({
+                    updateOne: {
+                        filter: { _id: existing._id },
+                        update: { $set: { shiftId } }
+                    }
+                });
                 updated.push(day);
             }
-
             continue;
         }
 
-        await ShiftAssignment.create({
-            employeeId,
-            shiftId,
-            date
+        bulkOps.push({
+            insertOne: {
+                document: { employeeId, shiftId, date }
+            }
         });
-
         assigned.push(day);
+    }
+
+    if (bulkOps.length > 0) {
+        await ShiftAssignment.bulkWrite(bulkOps, { ordered: false });
     }
 
     return {

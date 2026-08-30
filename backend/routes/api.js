@@ -36,12 +36,12 @@ import validate from "../middlewares/validate.js";
 router.post("/register", authMiddleware, requiredAdmin, createEmployeeValidation, validate, employeeController.createEmp)
 router.get("/employees", authMiddleware, requiredAdmin, employeeController.getEmps)
 router.get("/employees/:id", authMiddleware, requiredAdmin, employeeIdValidation, validate, employeeController.getEmpById)
-router.put("/employees/:id", authMiddleware, requiredAdmin, updateEmployeeValidation, validate, employeeController.updateEmp)
+router.put("/employees/:id", authMiddleware, requiredAdmin, employeeIdValidation, updateEmployeeValidation, validate, employeeController.updateEmp)
 router.delete("/employees/:id", authMiddleware, requiredAdmin, employeeIdValidation, validate, employeeController.deleteEmp)
 
 
 // Authentication Routes
-router.post("/login", authLimiter, loginValidation, validate, authController.login)
+router.post("/login", loginValidation, validate, authController.login)
 router.get("/session", authMiddleware, authController.session)
 router.post("/change-password", authMiddleware, changePasswordValidation, validate, asyncHandler(authController.changePass))
 router.post("/logout", authMiddleware, authController.logout);
@@ -61,6 +61,7 @@ router.post("/profile/pic", authMiddleware, upload.single("profilePic"), profile
 router.post("/attendance", authMiddleware, attendanceController.userClockInOut)
 router.get("/attendance", authMiddleware, attendanceQueryValidation, validate, attendanceController.getUserAttendance)
 router.get("/admin/attendance", authMiddleware, requiredAdmin, adminAttendanceQueryValidation, validate, attendanceController.getAdminAttendance)
+router.get("/admin/today-attendance", authMiddleware, requiredAdmin, attendanceController.getTodayAttendanceStatus)
 
 
 // Leave Routes
@@ -95,7 +96,7 @@ router.patch("/shift/:id/activate", authMiddleware, requiredAdmin, shiftControll
 router.post("/assign-shift", authMiddleware, requiredAdmin, shiftAssignmentController.assignShift);
 router.post("/assign-shift-month", authMiddleware, requiredAdmin, shiftAssignmentController.assignShiftForMonth);
 router.get("/my-shifts", authMiddleware, shiftAssignmentController.getMyShifts);
-router.get("/employee-roster/:id", authMiddleware, shiftAssignmentController.getEmployeeRoster);
+router.get("/employee-roster/:id", authMiddleware, requiredAdmin, shiftAssignmentController.getEmployeeRoster);
 router.get("/shift/:id/date", authMiddleware, shiftAssignmentController.getShiftByDate);
 router.patch("/update-shift-assignment/:id", authMiddleware, requiredAdmin, shiftAssignmentController.updateShiftAssignment);
 router.delete("/delete-shift-assignment/:id", authMiddleware, requiredAdmin, shiftAssignmentController.deleteShiftAssignment);

@@ -28,3 +28,9 @@ export const getUserAttendance = asyncHandler(async (req, res) => {
 
     return res.status(200).json(result);
 });
+
+export const getTodayAttendanceStatus = asyncHandler(async (req, res) => {
+    const result = await attendanceService.getTodayAttendanceStatus();
+
+    return res.status(200).json(result);
+});

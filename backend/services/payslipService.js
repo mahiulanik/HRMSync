@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Employee from "../models/employeeModel.js"
 import Payslip from "../models/payslipModel.js"
 import AppError from "../utils/AppError.js";
+import { escapeRegex } from "../utils/dateHelpers.js";
 
 
 export const createPayslip = async (payslipData) => {
@@ -61,11 +62,12 @@ export const getPayslips = async (session, page = 1, limit = 10, search = '', so
          const where = {};
 
         if (search) {
+            const safe = escapeRegex(search);
             const employees = await Employee.find({
                 $or: [
-                    { firstName: { $regex: search, $options: 'i' } },
-                    { lastName: { $regex: search, $options: 'i' } },
-                    { email: { $regex: search, $options: 'i' } },
+                    { firstName: { $regex: safe, $options: 'i' } },
+                    { lastName: { $regex: safe, $options: 'i' } },
+                    { email: { $regex: safe, $options: 'i' } },
                 ]
             }).select('_id').lean();
 
@@ -86,7 +88,7 @@ export const getPayslips = async (session, page = 1, limit = 10, search = '', so
 
         const [payslips, totalCount] = await Promise.all([
             Payslip.find(where)
-                .populate('employeeId')
+                .populate('employeeId', 'firstName lastName email department position')
                 .sort({ [safeSortBy]: safeSortOrder })
                 .skip(skip)
                 .limit(limitNum),
@@ -134,10 +136,6 @@ export const getPayslips = async (session, page = 1, limit = 10, search = '', so
 
 
 export const getPayslipById = async (id, session) => {
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new AppError("Invalid payslip ID", 400);
-    }
 
     const payslip = await Payslip.findById(id)
         .populate("employeeId")
@@ -188,9 +186,6 @@ export const getPayslipById = async (id, session) => {
 
 
 export const updatePayslip = async (id, updateData) => {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new AppError("Invalid payslip ID", 400);
-    }
 
     const payslip = await Payslip.findById(id);
     if (!payslip) {

@@ -9,6 +9,8 @@ const publicHolidaySchema = new mongoose.Schema(
     { timestamps: true, versionKey: false }
 );
 
+publicHolidaySchema.index({ startDate: 1, endDate: 1 });
+
 const PublicHoliday = mongoose.models.PublicHoliday || mongoose.model("PublicHoliday", publicHolidaySchema);
 
 export default PublicHoliday;
