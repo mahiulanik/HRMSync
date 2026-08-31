@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Building2,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import {
   BarChart,
@@ -103,7 +104,8 @@ export default function AdminDashboard() {
 
   if (!stats) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <Loader2 size={28} className="animate-spin text-primary" />
         <div className="text-text-secondary text-sm">Loading dashboard...</div>
       </div>
     );
@@ -197,15 +199,15 @@ export default function AdminDashboard() {
           subtitle="Today"
         />
         <StatCard
-          title="Payroll This Month"
+          title="Last Month's Net Salary"
           value={
-            stats.payrollThisMonth
-              ? `৳${stats.payrollThisMonth.grossSalary?.toLocaleString() || 0}`
+            stats.lastMonthPayroll
+              ? `৳${stats.lastMonthPayroll.netSalary?.toLocaleString() || 0}`
               : "—"
           }
           icon={DollarSign}
           color="primary"
-          subtitle={stats.payrollThisMonth?.status || "No payroll"}
+          subtitle={stats.lastMonthPayroll?.status || "No payroll"}
         />
         <StatCard
           title="Overtime"
@@ -454,47 +456,47 @@ export default function AdminDashboard() {
 
       {/* Payroll Overview & Employee Growth */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <SectionCard title="Payroll Overview">
-          {stats.payrollThisMonth ? (
+        <SectionCard title="Last Month's Payroll">
+          {stats.lastMonthPayroll ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 rounded-lg bg-page-bg">
                 <span className="text-sm text-text-secondary">
                   Gross Salary
                 </span>
                 <span className="text-sm font-bold">
-                  ৳{stats.payrollThisMonth.grossSalary?.toLocaleString() || 0}
+                  ৳{stats.lastMonthPayroll.grossSalary?.toLocaleString() || 0}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-lg bg-page-bg">
                 <span className="text-sm text-text-secondary">Deductions</span>
                 <span className="text-sm font-bold text-danger">
-                  - ৳{stats.payrollThisMonth.deductions?.toLocaleString() || 0}
+                  - ৳{stats.lastMonthPayroll.deductions?.toLocaleString() || 0}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
                 <span className="text-sm font-semibold">Net Salary</span>
                 <span className="text-sm font-bold text-primary">
-                  ৳{stats.payrollThisMonth.netSalary?.toLocaleString() || 0}
+                  ৳{stats.lastMonthPayroll.netSalary?.toLocaleString() || 0}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-lg bg-page-bg">
                 <span className="text-sm text-text-secondary">Status</span>
                 <span
                   className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                    stats.payrollThisMonth.status === "PAID"
+                    stats.lastMonthPayroll.status === "PAID"
                       ? "bg-success/10 text-success"
-                      : stats.payrollThisMonth.status === "PROCESSED"
+                      : stats.lastMonthPayroll.status === "PROCESSED"
                         ? "bg-primary/10 text-primary"
                         : "bg-warning/10 text-warning"
                   }`}
                 >
-                  {stats.payrollThisMonth.status}
+                  {stats.lastMonthPayroll.status}
                 </span>
               </div>
             </div>
           ) : (
             <div className="text-center text-text-secondary text-sm py-8">
-              No payroll processed this month
+              No payroll processed for last month
             </div>
           )}
         </SectionCard>

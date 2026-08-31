@@ -209,6 +209,7 @@ export const getAdminDashboard = async () => {
         pendingLeaves,
         recentEmployees,
         payrollThisMonth,
+        lastMonthPayroll,
         overtimeResult,
         onLeaveToday,
         departmentAttendance,
@@ -228,6 +229,10 @@ export const getAdminDashboard = async () => {
             .limit(8)
             .lean(),
         Payroll.findOne({ month: now.getMonth() + 1, year: now.getFullYear() }).lean(),
+        Payroll.findOne({
+            month: now.getMonth() === 0 ? 12 : now.getMonth(),
+            year: now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
+        }).sort({ processedAt: -1 }).lean(),
         Attendance.aggregate([
             {
                 $match: { date: { $gte: todayStart, $lt: todayEnd }, overtimeMinutes: { $gt: 0 } }
@@ -292,6 +297,12 @@ export const getAdminDashboard = async () => {
             deductions: payrollThisMonth.totalDeductions,
             netSalary: payrollThisMonth.totalNetSalary,
             status: payrollThisMonth.status
+        } : null,
+        lastMonthPayroll: lastMonthPayroll ? {
+            grossSalary: lastMonthPayroll.totalGrossSalary,
+            deductions: lastMonthPayroll.totalDeductions,
+            netSalary: lastMonthPayroll.totalNetSalary,
+            status: lastMonthPayroll.status
         } : null,
         overtimeHours,
         onLeaveToday: onLeaveCount,

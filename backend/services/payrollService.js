@@ -289,7 +289,7 @@ export const getCompanyPayroll = async (month, year) => {
     const payroll = await Payroll.findOne({ month, year }).lean();
 
     if (!payroll) {
-        throw new AppError("Payroll not found for this month", 404);
+        return { success: true, data: null };
     }
 
     return {
@@ -349,7 +349,7 @@ export const getDepartmentPayroll = async (department, month, year) => {
     ]);
 
     if (!result.length) {
-        throw new AppError("No payroll found for this department", 404);
+        return { success: true, data: null };
     }
 
     return {
@@ -378,7 +378,7 @@ export const getEmployeePayroll = async (employeeId, month, year) => {
         .lean();
 
     if (!payslip) {
-        throw new AppError("Payslip not found for this employee and month", 404);
+        return { success: true, data: null };
     }
 
     const employee = payslip.employeeId;

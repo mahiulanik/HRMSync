@@ -18,6 +18,21 @@ const refreshClient = axios.create({
   withCredentials: true,
 });
 
+// ── Refresh lock: prevents multiple simultaneous token refreshes ──
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Attach access token
 api.interceptors.request.use(
   (config) => {
@@ -47,21 +62,41 @@ api.interceptors.response.use(
       !originalRequest.url?.includes("/login") &&
       !originalRequest.url?.includes("/refresh-token")
     ) {
+      // If already refreshing, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         const { data } = await refreshClient.post("/refresh-token");
         localStorage.setItem("accessToken", data.accessToken);
 
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        // Retry all queued requests with the new token
+        processQueue(null, data.accessToken);
 
+        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
+        // Notify all queued requests of failure
+        processQueue(refreshError, null);
+
         localStorage.removeItem("accessToken");
 
         window.location.href = "/";
 
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 

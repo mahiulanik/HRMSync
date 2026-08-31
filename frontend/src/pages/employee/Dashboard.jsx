@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
-import { Percent, FileText, DollarSign, Gift } from "lucide-react";
+import { Percent, FileText, DollarSign, Gift, Loader2 } from "lucide-react";
 
 function StatCard({ title, value, icon: Icon, color = "primary" }) {
   const colorMap = {
@@ -52,7 +52,8 @@ export default function EmployeeDashboard() {
 
   if (!stats) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <Loader2 size={28} className="animate-spin text-primary" />
         <div className="text-text-secondary text-sm">Loading dashboard...</div>
       </div>
     );

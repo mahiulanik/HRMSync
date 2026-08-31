@@ -11,11 +11,11 @@ import {
 
 // ─── Reusable Checkout Helper ─────────────────────────────────
 
-const processCheckout = (record, now, shift) => {
-    record.checkOut = now;
+const processCheckout = (record, nowUTC, shift) => {
+    record.checkOut = nowUTC;
 
     const checkInTime = new Date(record.checkIn).getTime();
-    const diffMs = now.getTime() - checkInTime;
+    const diffMs = nowUTC.getTime() - checkInTime;
     const workingHours = parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2));
 
     let dayType = "Half Day";
@@ -24,10 +24,11 @@ const processCheckout = (record, now, shift) => {
     let overtimeMinutes = 0;
     if (shift) {
         const [endHour, endMinute] = shift.endTime.split(":").map(Number);
-        const shiftEnd = new Date(now);
+        const nowDhaka = nowInDhaka();
+        const shiftEnd = new Date(nowDhaka);
         shiftEnd.setHours(endHour, endMinute, 0, 0);
-        if (now > shiftEnd) {
-            overtimeMinutes = Math.floor((now.getTime() - shiftEnd.getTime()) / (1000 * 60));
+        if (nowDhaka > shiftEnd) {
+            overtimeMinutes = Math.floor((nowDhaka.getTime() - shiftEnd.getTime()) / (1000 * 60));
         }
     }
 
@@ -51,7 +52,8 @@ export const clockInOut = async (session) => {
         throw new AppError("Your account is deactivated, you cannot clock in/out", 403);
     }
 
-    const now = nowInDhaka();
+    const nowUTC = new Date();              // actual UTC for storing timestamps
+    const nowDhaka = nowInDhaka();           // Dhaka-shifted for comparisons
     const todayStart = startOfDayDhaka(0);
     const todayEnd = endOfDayDhaka();
 
@@ -79,7 +81,7 @@ export const clockInOut = async (session) => {
     // CHECK OUT
     if (existing) {
         if (!existing.checkOut) {
-            processCheckout(existing, now, shift);
+            processCheckout(existing, nowUTC, shift);
             await existing.save();
             return { success: true, type: "CHECK_OUT", data: existing };
         }
@@ -90,18 +92,18 @@ export const clockInOut = async (session) => {
     let status = "PRESENT";
     let lateMinutes = 0;
 
-    if (shift?.weekends?.includes(now.getDay())) {
+    if (shift?.weekends?.includes(nowDhaka.getDay())) {
         status = "WEEKEND";
     } else if (shift) {
         const [startHour, startMinute] = shift.startTime.split(":").map(Number);
-        const shiftStart = new Date(now);
+        const shiftStart = new Date(nowDhaka);
         shiftStart.setHours(startHour, startMinute, 0, 0);
 
         const graceEnd = new Date(shiftStart.getTime() + shift.graceMinutes * 60 * 1000);
 
-        if (now > graceEnd) {
+        if (nowDhaka > graceEnd) {
             status = "LATE";
-            lateMinutes = Math.floor((now.getTime() - graceEnd.getTime()) / (1000 * 60));
+            lateMinutes = Math.floor((nowDhaka.getTime() - graceEnd.getTime()) / (1000 * 60));
         }
     }
 
@@ -110,7 +112,7 @@ export const clockInOut = async (session) => {
             employeeId: employee._id,
             shiftId: shift?._id || null,
             date: todayStart,
-            checkIn: now,
+            checkIn: nowUTC,
             status,
             lateMinutes,
             overtimeMinutes: 0,
@@ -124,7 +126,7 @@ export const clockInOut = async (session) => {
             });
 
             if (existing && !existing.checkOut) {
-                processCheckout(existing, now, shift);
+                processCheckout(existing, nowUTC, shift);
                 await existing.save();
                 return { success: true, type: "CHECK_OUT", data: existing };
             }

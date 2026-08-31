@@ -1,5 +1,8 @@
 export const errorMiddleware = (err, req, res, next) => {
-    console.error(err);
+    // Only log unexpected errors (500s), not operational/client errors
+    if (!err.statusCode || err.statusCode >= 500) {
+        console.error(err);
+    }
 
     const statusCode = err.statusCode || 500;
 
