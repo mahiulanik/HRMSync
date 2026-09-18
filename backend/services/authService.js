@@ -197,7 +197,7 @@ export const sendPasswordResetOTP = async (email) => {
 
     await sendEmail(
         user.email,
-        "Password Reset OTP",
+        "HRMSync - Password Reset OTP",
         `
             <p>Your password reset OTP for <strong>HRMSync</strong> is:</p>
             <p><strong style="font-size: 24px;">${otp}</strong></p>
